@@ -8,9 +8,10 @@ Street Legal is an original Roblox open-world dirt bike stunt MVP built for a Ro
 - Electric dirt bike roster with free starter bikes and higher-tier progression bikes
 - First-spawn garage onboarding with obvious free-bike selection and one-click Equip & Spawn flow
 - Persistent HUD Garage / Spawn Bike button so players are never stranded on foot wondering what to do
+- Substantially upgraded procedural city art pass with district identity, dressed roads, waterfront composition, props, signage, park/quarry shaping, and tuned lighting
 - Server-authoritative ownership, currency, and wanted state
 - Police patrol + pursuit AI using `PathfindingService`
-- Runtime world generation using primitives so the MVP works immediately in Studio
+- Runtime world generation using primitives so the game stays runnable in Studio without imported assets
 
 ## Project Structure
 
@@ -65,8 +66,10 @@ Open `build/StreetLegal.rbxlx` in Roblox Studio.
 - The world is generated at runtime by `Workspace/Map/CityBuilder.server.lua`.
 - On first spawn, the garage auto-opens and focuses the free starter bikes.
 - Use the pinned HUD `Spawn Bike` / `Garage` button any time; `M` still toggles the garage if you want a keyboard shortcut.
-- If you are on foot with no active bike, the HUD and center callout will explicitly tell you to spawn one.
-- Garage flow is now built around obvious `Equip & Spawn`, `Spawn Selected`, `Respawn Selected`, and `Store Bike` actions.
+- If you are on foot with no active bike, the HUD and center callout explicitly tell you to spawn one.
+- Garage flow is built around obvious `Equip & Spawn`, `Spawn Selected`, `Respawn Selected`, and `Store Bike` actions.
+- The world now includes stronger district art direction: rowhouse blocks, market towers/plaza, park dressing, harbor warehouses/cranes, canal promenade/boardwalk, and quarry berms.
+- Lighting/atmosphere are configured at runtime for a more deliberate late-afternoon look.
 - HUD shows speed, heat, district, combo, and the no-bike prompt state.
 - Police will patrol automatically after the world is ready.
 - In Studio, DataStore calls can fail if the place is unpublished or API services are disabled; the game falls back to session-only defaults.

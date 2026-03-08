@@ -1,12 +1,13 @@
-Update Addendum — 2026-03-08 UX + Visual Pass
+Update Addendum — 2026-03-08 Stronger Environment + UX + Bike Pass
 
-- First spawn now auto-opens the garage and focuses free starter bikes.
-- HUD now keeps a persistent Garage / Spawn Bike button on screen so players are never dumped on foot without direction.
+- First spawn auto-opens the garage and focuses free starter bikes.
+- HUD keeps a persistent Garage / Spawn Bike button on screen so players are never dumped on foot without direction.
 - If no bike is active, a centered callout explicitly tells the player to select and spawn one.
-- Free-bike flow now centers on one-click `Equip & Spawn` from the garage.
-- Bike visuals were rebuilt into more recognizable electric dirt bike silhouettes using Roblox parts/primitives and per-bike visual presets.
+- Free-bike flow centers on one-click `Equip & Spawn` from the garage.
+- Bike visuals were rebuilt into more recognizable electric dirt bike silhouettes using Roblox parts/primitives, then refined further with added bodywork/detail pieces for stronger modern e-bike read.
 - Bike names/descriptions were refreshed toward original e-dirt-bike-inspired lineup language instead of generic placeholder bikes.
 - New visual tuning module: `src/ReplicatedStorage/Modules/BikeVisuals.lua`
+- The map generator received a substantial art-direction pass: improved lighting/atmosphere, road dressing, district identity, waterfront treatment, park/quarry shaping, props, signage, harbor structures, and more deliberate building silhouettes.
 
 Assumptions
 

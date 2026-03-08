@@ -384,6 +384,28 @@ function PurchaseService:CreateBikeModel(player, bikeId)
 	decorPart("SidePlateRight", Vector3.new(0.08, 0.76, 1.06), Vector3.new((g.BatterySize.X * 0.5) + 0.1, g.BatteryY + 0.1, g.BatteryZ - 0.06), paint, Enum.Material.SmoothPlastic, {
 		Rotation = Vector3.new(0, -8, 0),
 	})
+	decorPart("SeatCowl", Vector3.new(0.9, 0.18, 1.12), Vector3.new(0, g.SeatHeight + 0.1, g.SeatZ + (g.SeatLength * 0.24)), c.Accent, Enum.Material.SmoothPlastic, {
+		Rotation = Vector3.new(-4, 0, 0),
+	})
+	decorPart("ForkGuardLeft", Vector3.new(0.16, 0.82, 0.28), Vector3.new(-(g.ForkSpread * 0.5), g.FrontAxleY + 0.56, frontWheelZ + 0.14), paint, Enum.Material.SmoothPlastic, {
+		Rotation = Vector3.new(-10, 0, 0),
+	})
+	decorPart("ForkGuardRight", Vector3.new(0.16, 0.82, 0.28), Vector3.new((g.ForkSpread * 0.5), g.FrontAxleY + 0.56, frontWheelZ + 0.14), paint, Enum.Material.SmoothPlastic, {
+		Rotation = Vector3.new(-10, 0, 0),
+	})
+	decorPart("RearDisc", Vector3.new(0.08, g.RearWheelRadius * 0.74, g.RearWheelRadius * 0.74), Vector3.new(0.21, g.RearAxleY, rearWheelZ), c.Trim, Enum.Material.Metal, {
+		Shape = Enum.PartType.Cylinder,
+	})
+	decorPart("FrontDisc", Vector3.new(0.08, g.FrontWheelRadius * 0.82, g.FrontWheelRadius * 0.82), Vector3.new(0.21, g.FrontAxleY, frontWheelZ), c.Trim, Enum.Material.Metal, {
+		Shape = Enum.PartType.Cylinder,
+	})
+	decorPart("PegLeft", Vector3.new(0.6, 0.1, 0.18), Vector3.new(-0.62, g.MotorY + 0.06, g.MotorZ + 0.38), c.Trim, Enum.Material.Metal)
+	decorPart("PegRight", Vector3.new(0.6, 0.1, 0.18), Vector3.new(0.62, g.MotorY + 0.06, g.MotorZ + 0.38), c.Trim, Enum.Material.Metal)
+	decorPart("RearBrace", Vector3.new(0.18, 0.68, 0.18), Vector3.new(0, g.SeatHeight - 0.1, g.SeatZ + (g.SeatLength * 0.5) - 0.18), c.Trim, Enum.Material.Metal, {
+		Rotation = Vector3.new(-20, 0, 0),
+	})
+	decorPart("LowerBatteryGuard", Vector3.new(g.BatterySize.X + 0.18, 0.14, 0.92), Vector3.new(0, g.BatteryY - (g.BatterySize.Y * 0.48), g.BatteryZ + 0.18), c.Frame, Enum.Material.Metal)
+	decorPart("ChargePortCap", Vector3.new(0.14, 0.18, 0.18), Vector3.new((g.BatterySize.X * 0.5) + 0.12, g.BatteryY + 0.2, g.BatteryZ + 0.24), c.Accent, Enum.Material.Neon)
 
 	local frameWidth = g.FrameWidth
 	local forkHalf = g.ForkSpread * 0.5
