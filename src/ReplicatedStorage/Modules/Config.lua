@@ -3,8 +3,8 @@ local RunService = game:GetService("RunService")
 local Config = {
 	Experience = {
 		Name = "Street Legal",
-		Version = "0.3.1",
-		Build = "hard-spawn-stabilization",
+		Version = "0.3.2",
+		Build = "garage-bay-spawn-fix",
 	},
 	Gameplay = {
 		DataStoreName = "StreetLegal_PlayerData_v1",

@@ -476,8 +476,8 @@ return profiles
 local Config = {
 	Experience = {
 		Name = "Street Legal",
-		Version = "0.3.1",
-		Build = "hard-spawn-stabilization",
+		Version = "0.3.2",
+		Build = "garage-bay-spawn-fix",
 	},
 	Gameplay = {
 		DataStoreName = "StreetLegal_PlayerData_v1",
@@ -1457,6 +1457,13 @@ function PurchaseService:GetSpawnCFrame(player, bikeId)
 	) + 0.05
 
 	local character = player.Character
+	if character and SpawnUtil:IsCharacterInEmergencyGarage(character) then
+		local emergencyGarageCFrame = SpawnUtil:GetEmergencyBikeSpawnCFrame(groundOffset)
+		if emergencyGarageCFrame then
+			return emergencyGarageCFrame
+		end
+	end
+
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 	if rootPart then
 		local forward = rootPart.CFrame.LookVector
@@ -2214,10 +2221,15 @@ local SpawnUtil = {}
 
 local DEFAULT_LOOK = Vector3.new(0, 0, -1)
 local EMERGENCY_FOLDER_NAME = "SafeSpawnArea"
-local EMERGENCY_PLATFORM_NAME = "SafeSpawnPlatform"
+local EMERGENCY_PLATFORM_NAME = "SafeSpawnFloor"
 local EMERGENCY_LOCATION_NAME = "SafeSpawnLocation"
-local EMERGENCY_PLATFORM_CFRAME = CFrame.new(0, 14, 860) * CFrame.Angles(0, math.rad(180), 0)
-local EMERGENCY_PLATFORM_SIZE = Vector3.new(96, 8, 96)
+local EMERGENCY_FOOT_MARKER_NAME = "SafeSpawnFootAnchor"
+local EMERGENCY_BIKE_MARKER_NAME = "SafeSpawnBikeAnchor"
+local EMERGENCY_ZONE_NAME = "SafeSpawnGarageZone"
+local EMERGENCY_GARAGE_CFRAME = CFrame.new(252, 0.3, 820) * CFrame.Angles(0, math.rad(90), 0)
+local EMERGENCY_GARAGE_FLOOR_SIZE = Vector3.new(32, 0.6, 34)
+local EMERGENCY_EXIT_LANE_SIZE = Vector3.new(18, 0.6, 40)
+local EMERGENCY_GARAGE_ZONE_SIZE = Vector3.new(26, 10, 30)
 
 local function flattenLookVector(vector)
 	local flat = Vector3.new(vector.X, 0, vector.Z)
@@ -2275,6 +2287,61 @@ local function createOrUpdatePart(parent, className, name, size, cframe, color, 
 	return instance
 end
 
+local function setSurfaceAttributes(part, district, surfaceType)
+	part:SetAttribute("District", district)
+	part:SetAttribute("SurfaceType", surfaceType)
+	return part
+end
+
+local function attachSurfaceLabel(part, text, color)
+	if not part then
+		return
+	end
+
+	local gui = part:FindFirstChild("Label")
+	if not gui or not gui:IsA("SurfaceGui") then
+		if gui then
+			gui:Destroy()
+		end
+		gui = Instance.new("SurfaceGui")
+		gui.Name = "Label"
+		gui.Face = Enum.NormalId.Front
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 40
+		gui.AlwaysOnTop = false
+		gui.Parent = part
+	end
+
+	local label = gui:FindFirstChild("Text")
+	if not label or not label:IsA("TextLabel") then
+		if label then
+			label:Destroy()
+		end
+		label = Instance.new("TextLabel")
+		label.Name = "Text"
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.GothamBlack
+		label.TextScaled = true
+		label.Parent = gui
+	end
+
+	label.Text = text
+	label.TextColor3 = color or Color3.fromRGB(245, 245, 245)
+end
+
+local function pointInsidePart(part, point)
+	if not part or not part:IsA("BasePart") then
+		return false
+	end
+
+	local localPoint = part.CFrame:PointToObjectSpace(point)
+	local half = part.Size * 0.5
+	return math.abs(localPoint.X) <= half.X
+		and math.abs(localPoint.Y) <= half.Y
+		and math.abs(localPoint.Z) <= half.Z
+end
+
 function SpawnUtil:WaitForWorldReady(timeoutSeconds)
 	local startedAt = os.clock()
 	while Workspace:GetAttribute("StreetLegalWorldReady") ~= true do
@@ -2301,70 +2368,247 @@ function SpawnUtil:EnsureEmergencySpawnArea()
 		safeFolder.Parent = spawnsFolder
 	end
 
-	local platform = createOrUpdatePart(
+	local floor = setSurfaceAttributes(createOrUpdatePart(
 		safeFolder,
 		"Part",
 		EMERGENCY_PLATFORM_NAME,
-		EMERGENCY_PLATFORM_SIZE,
-		EMERGENCY_PLATFORM_CFRAME,
-		Color3.fromRGB(92, 96, 108),
+		EMERGENCY_GARAGE_FLOOR_SIZE,
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(0, EMERGENCY_GARAGE_FLOOR_SIZE.Y * 0.5, 5),
+		Color3.fromRGB(72, 75, 81),
+		Enum.Material.Concrete,
+		0,
+		true
+	), "SafeSpawn", "Street")
+
+	local exitLane = setSurfaceAttributes(createOrUpdatePart(
+		safeFolder,
+		"Part",
+		"SafeSpawnExitLane",
+		EMERGENCY_EXIT_LANE_SIZE,
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(0, EMERGENCY_EXIT_LANE_SIZE.Y * 0.5, -31),
+		Color3.fromRGB(50, 53, 58),
+		Enum.Material.Asphalt,
+		0,
+		true
+	), "SafeSpawn", "Street")
+	setSurfaceAttributes(createOrUpdatePart(
+		safeFolder,
+		"Part",
+		"SafeSpawnLaneStripe",
+		Vector3.new(0.6, 0.05, 24),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(0, 0.64, -31),
+		Color3.fromRGB(255, 208, 94),
+		Enum.Material.Neon,
+		0,
+		false
+	), "SafeSpawn", "Street")
+	setSurfaceAttributes(createOrUpdatePart(
+		safeFolder,
+		"Part",
+		"SafeSpawnLaneEdgeLeft",
+		Vector3.new(0.25, 0.04, 34),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(-8.85, 0.63, -28),
+		Color3.fromRGB(214, 214, 214),
+		Enum.Material.SmoothPlastic,
+		0,
+		false
+	), "SafeSpawn", "Street")
+	setSurfaceAttributes(createOrUpdatePart(
+		safeFolder,
+		"Part",
+		"SafeSpawnLaneEdgeRight",
+		Vector3.new(0.25, 0.04, 34),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(8.85, 0.63, -28),
+		Color3.fromRGB(214, 214, 214),
+		Enum.Material.SmoothPlastic,
+		0,
+		false
+	), "SafeSpawn", "Street")
+
+	setSurfaceAttributes(createOrUpdatePart(
+		safeFolder,
+		"Part",
+		"SafeSpawnThreshold",
+		Vector3.new(18, 0.2, 3),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(0, 0.72, -11),
+		Color3.fromRGB(255, 196, 88),
+		Enum.Material.Neon,
+		0.2,
+		false
+	), "SafeSpawn", "Street")
+
+	createOrUpdatePart(
+		safeFolder,
+		"Part",
+		"SafeSpawnBackWall",
+		Vector3.new(32, 10, 2),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(0, 5.6, 20),
+		Color3.fromRGB(59, 63, 72),
+		Enum.Material.Metal,
+		0,
+		true
+	)
+	createOrUpdatePart(
+		safeFolder,
+		"Part",
+		"SafeSpawnWallLeft",
+		Vector3.new(2, 10, 30),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(-15, 5.6, 4),
+		Color3.fromRGB(66, 70, 79),
+		Enum.Material.Metal,
+		0,
+		true
+	)
+	createOrUpdatePart(
+		safeFolder,
+		"Part",
+		"SafeSpawnWallRight",
+		Vector3.new(2, 10, 30),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(15, 5.6, 4),
+		Color3.fromRGB(66, 70, 79),
+		Enum.Material.Metal,
+		0,
+		true
+	)
+	createOrUpdatePart(
+		safeFolder,
+		"Part",
+		"SafeSpawnFrontHeader",
+		Vector3.new(24, 3, 2),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(0, 8.1, -11),
+		Color3.fromRGB(88, 96, 108),
+		Enum.Material.Metal,
+		0,
+		true
+	)
+	createOrUpdatePart(
+		safeFolder,
+		"Part",
+		"SafeSpawnColumnLeft",
+		Vector3.new(2, 7.2, 2),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(-11, 4.2, -11),
+		Color3.fromRGB(88, 96, 108),
+		Enum.Material.Metal,
+		0,
+		true
+	)
+	createOrUpdatePart(
+		safeFolder,
+		"Part",
+		"SafeSpawnColumnRight",
+		Vector3.new(2, 7.2, 2),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(11, 4.2, -11),
+		Color3.fromRGB(88, 96, 108),
+		Enum.Material.Metal,
+		0,
+		true
+	)
+	createOrUpdatePart(
+		safeFolder,
+		"Part",
+		"SafeSpawnRoof",
+		Vector3.new(34, 1.2, 36),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(0, 10.6, 3),
+		Color3.fromRGB(42, 45, 51),
+		Enum.Material.Metal,
+		0,
+		true
+	)
+	createOrUpdatePart(
+		safeFolder,
+		"Part",
+		"SafeSpawnRoofTrim",
+		Vector3.new(24, 0.4, 1),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(0, 9.75, -12.1),
+		Color3.fromRGB(255, 170, 60),
+		Enum.Material.Neon,
+		0,
+		false
+	)
+	createOrUpdatePart(
+		safeFolder,
+		"Part",
+		"SafeSpawnCeilingLight",
+		Vector3.new(12, 0.25, 2.2),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(0, 9.85, 4),
+		Color3.fromRGB(255, 236, 189),
+		Enum.Material.Neon,
+		0,
+		false
+	)
+	createOrUpdatePart(
+		safeFolder,
+		"Part",
+		"SafeSpawnSignBacker",
+		Vector3.new(16, 3.6, 0.6),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(0, 8.2, 18.7),
+		Color3.fromRGB(28, 31, 36),
+		Enum.Material.Metal,
+		0,
+		true
+	)
+	local sign = createOrUpdatePart(
+		safeFolder,
+		"Part",
+		"SafeSpawnSign",
+		Vector3.new(14, 2.6, 0.2),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(0, 8.2, 18),
+		Color3.fromRGB(110, 214, 240),
+		Enum.Material.Neon,
+		0,
+		false
+	)
+	attachSurfaceLabel(sign, "SAFE BAY", Color3.fromRGB(19, 27, 34))
+	createOrUpdatePart(
+		safeFolder,
+		"Part",
+		"SafeSpawnWheelStop",
+		Vector3.new(18, 0.8, 1.4),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(0, 1, 15.5),
+		Color3.fromRGB(96, 103, 114),
 		Enum.Material.Concrete,
 		0,
 		true
 	)
-	platform:SetAttribute("SurfaceType", "Street")
-	platform:SetAttribute("District", "SafeSpawn")
 
-	local wallHeight = 12
-	local wallThickness = 4
-	local halfX = (EMERGENCY_PLATFORM_SIZE.X * 0.5) - (wallThickness * 0.5)
-	local halfZ = (EMERGENCY_PLATFORM_SIZE.Z * 0.5) - (wallThickness * 0.5)
-	local wallY = (EMERGENCY_PLATFORM_SIZE.Y * 0.5) + (wallHeight * 0.5)
+	local footAnchor = createOrUpdatePart(
+		safeFolder,
+		"Part",
+		EMERGENCY_FOOT_MARKER_NAME,
+		Vector3.new(1, 1, 1),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(0, 0.6, 8),
+		Color3.fromRGB(255, 255, 255),
+		Enum.Material.SmoothPlastic,
+		1,
+		false
+	)
+	footAnchor.CastShadow = false
 
-	createOrUpdatePart(
+	local bikeAnchor = createOrUpdatePart(
 		safeFolder,
 		"Part",
-		"NorthBarrier",
-		Vector3.new(EMERGENCY_PLATFORM_SIZE.X, wallHeight, wallThickness),
-		EMERGENCY_PLATFORM_CFRAME * CFrame.new(0, wallY, -halfZ),
-		Color3.fromRGB(63, 67, 76),
-		Enum.Material.Metal,
-		0,
-		true
+		EMERGENCY_BIKE_MARKER_NAME,
+		Vector3.new(1, 1, 1),
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(0, 0.6, -6),
+		Color3.fromRGB(255, 255, 255),
+		Enum.Material.SmoothPlastic,
+		1,
+		false
 	)
-	createOrUpdatePart(
+	bikeAnchor.CastShadow = false
+
+	local zone = createOrUpdatePart(
 		safeFolder,
 		"Part",
-		"SouthBarrier",
-		Vector3.new(EMERGENCY_PLATFORM_SIZE.X, wallHeight, wallThickness),
-		EMERGENCY_PLATFORM_CFRAME * CFrame.new(0, wallY, halfZ),
-		Color3.fromRGB(63, 67, 76),
-		Enum.Material.Metal,
-		0,
-		true
+		EMERGENCY_ZONE_NAME,
+		EMERGENCY_GARAGE_ZONE_SIZE,
+		EMERGENCY_GARAGE_CFRAME * CFrame.new(0, 5, 5),
+		Color3.fromRGB(255, 255, 255),
+		Enum.Material.SmoothPlastic,
+		1,
+		false
 	)
-	createOrUpdatePart(
-		safeFolder,
-		"Part",
-		"WestBarrier",
-		Vector3.new(wallThickness, wallHeight, EMERGENCY_PLATFORM_SIZE.Z),
-		EMERGENCY_PLATFORM_CFRAME * CFrame.new(-halfX, wallY, 0),
-		Color3.fromRGB(63, 67, 76),
-		Enum.Material.Metal,
-		0,
-		true
-	)
-	createOrUpdatePart(
-		safeFolder,
-		"Part",
-		"EastBarrier",
-		Vector3.new(wallThickness, wallHeight, EMERGENCY_PLATFORM_SIZE.Z),
-		EMERGENCY_PLATFORM_CFRAME * CFrame.new(halfX, wallY, 0),
-		Color3.fromRGB(63, 67, 76),
-		Enum.Material.Metal,
-		0,
-		true
-	)
+	zone.CastShadow = false
 
 	local spawnLocation = safeFolder:FindFirstChild(EMERGENCY_LOCATION_NAME)
 	if not spawnLocation or not spawnLocation:IsA("SpawnLocation") then
@@ -2377,17 +2621,19 @@ function SpawnUtil:EnsureEmergencySpawnArea()
 	end
 
 	spawnLocation.Anchored = true
-	spawnLocation.Size = Vector3.new(18, 0.2, 18)
-	spawnLocation.CFrame = EMERGENCY_PLATFORM_CFRAME * CFrame.new(0, (EMERGENCY_PLATFORM_SIZE.Y * 0.5) + 0.11, 0)
-	spawnLocation.Transparency = 0.9
+	spawnLocation.Size = Vector3.new(14, 0.2, 14)
+	spawnLocation.CFrame = footAnchor.CFrame * CFrame.new(0, 0.11, 0)
+	spawnLocation.Transparency = 0.92
 	spawnLocation.Color = Color3.fromRGB(110, 214, 240)
 	spawnLocation.Material = Enum.Material.Neon
 	spawnLocation.Neutral = true
 	spawnLocation.CanCollide = false
 	spawnLocation.Enabled = true
 	spawnLocation:SetAttribute("EmergencySpawn", true)
+	spawnLocation:SetAttribute("District", "SafeSpawn")
+	spawnLocation:SetAttribute("SurfaceType", "Street")
 
-	return safeFolder, platform, spawnLocation
+	return safeFolder, floor, spawnLocation
 end
 
 function SpawnUtil:GetEmergencySpawnLocation()
@@ -2396,11 +2642,46 @@ function SpawnUtil:GetEmergencySpawnLocation()
 end
 
 function SpawnUtil:GetEmergencySpawnCFrame(character, lookVector)
-	local _, platform = self:EnsureEmergencySpawnArea()
+	local safeFolder, floor = self:EnsureEmergencySpawnArea()
+	local footAnchor = safeFolder:FindFirstChild(EMERGENCY_FOOT_MARKER_NAME)
 	local surfaceOffset = self:GetCharacterSurfaceOffset(character)
-	local spawnPosition = platform.Position + Vector3.new(0, (platform.Size.Y * 0.5) + surfaceOffset, 0)
-	local flatLook = flattenLookVector(lookVector or platform.CFrame.LookVector)
-	return CFrame.lookAt(spawnPosition, spawnPosition + flatLook, Vector3.yAxis), platform
+	local basePosition = (footAnchor and footAnchor.Position) or (floor.Position + Vector3.new(0, floor.Size.Y * 0.5, 0))
+	local flatLook = flattenLookVector(lookVector or (footAnchor and footAnchor.CFrame.LookVector) or floor.CFrame.LookVector)
+	local spawnPosition = basePosition + Vector3.new(0, surfaceOffset, 0)
+	return CFrame.lookAt(spawnPosition, spawnPosition + flatLook, Vector3.yAxis), floor
+end
+
+function SpawnUtil:GetEmergencyBikeSpawnCFrame(groundOffset)
+	local safeFolder, floor = self:EnsureEmergencySpawnArea()
+	local bikeAnchor = safeFolder:FindFirstChild(EMERGENCY_BIKE_MARKER_NAME)
+	local zone = safeFolder:FindFirstChild(EMERGENCY_ZONE_NAME)
+	local footAnchor = safeFolder:FindFirstChild(EMERGENCY_FOOT_MARKER_NAME)
+	local spawnLocation = safeFolder:FindFirstChild(EMERGENCY_LOCATION_NAME)
+	local anchorPosition = (bikeAnchor and bikeAnchor.Position) or (floor.Position + Vector3.new(0, floor.Size.Y * 0.5, 0))
+	local lookVector = flattenLookVector((bikeAnchor and bikeAnchor.CFrame.LookVector) or floor.CFrame.LookVector)
+	local resolved = self:ResolveGroundCFrame(anchorPosition, lookVector, {
+		bikeAnchor,
+		zone,
+		footAnchor,
+		spawnLocation,
+	}, 8, 28, groundOffset)
+	if resolved then
+		return resolved, floor
+	end
+
+	local spawnPosition = anchorPosition + Vector3.new(0, groundOffset or 0, 0)
+	return CFrame.lookAt(spawnPosition, spawnPosition + lookVector, Vector3.yAxis), floor
+end
+
+function SpawnUtil:IsCharacterInEmergencyGarage(character)
+	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+	if not rootPart then
+		return false
+	end
+
+	local safeFolder = self:EnsureEmergencySpawnArea()
+	local zone = safeFolder and safeFolder:FindFirstChild(EMERGENCY_ZONE_NAME)
+	return pointInsidePart(zone, rootPart.Position)
 end
 
 function SpawnUtil:GetSpawnPads()

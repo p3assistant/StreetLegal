@@ -216,6 +216,13 @@ function PurchaseService:GetSpawnCFrame(player, bikeId)
 	) + 0.05
 
 	local character = player.Character
+	if character and SpawnUtil:IsCharacterInEmergencyGarage(character) then
+		local emergencyGarageCFrame = SpawnUtil:GetEmergencyBikeSpawnCFrame(groundOffset)
+		if emergencyGarageCFrame then
+			return emergencyGarageCFrame
+		end
+	end
+
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 	if rootPart then
 		local forward = rootPart.CFrame.LookVector
