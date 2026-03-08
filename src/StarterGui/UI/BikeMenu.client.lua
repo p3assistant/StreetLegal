@@ -29,6 +29,7 @@ local state = {
 	SelectedBikeId = nil,
 	Message = "",
 	Busy = false,
+	ServerReachable = false,
 	AutoOpenedCharacter = nil,
 }
 
@@ -335,7 +336,7 @@ local function choosePreferredBike(focusFree)
 end
 
 local function isBootstrapReady()
-	return ReplicatedStorage:GetAttribute("StreetLegalBootstrapReady") == true
+	return ReplicatedStorage:GetAttribute("StreetLegalBootstrapReady") == true or state.ServerReachable == true
 end
 
 local function isSpawnReady()
@@ -568,6 +569,7 @@ local function refreshGarage(forceSelection)
 		return
 	end
 
+	state.ServerReachable = true
 	state.Catalog = (#(response.Catalog or {}) > 0) and response.Catalog or buildFallbackCatalog()
 	setSnapshot(response.Snapshot or state.Snapshot)
 	player:SetAttribute("StreetLegalActiveBikeId", response.ActiveBikeId)
@@ -586,10 +588,6 @@ end
 
 local function invokeAction(action)
 	if state.Busy or not state.SelectedBikeId then
-		return
-	end
-	if not isBootstrapReady() then
-		setMessage("Garage is still loading. Try again in a second.", Config.UI.Danger)
 		return
 	end
 	state.Busy = true

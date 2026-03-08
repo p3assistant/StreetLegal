@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Modules.Config)
 local BikeDefinitions = require(ReplicatedStorage.Modules.BikeDefinitions)
@@ -10,6 +11,7 @@ local DataService = {
 	Remotes = nil,
 	Store = nil,
 	Initialized = false,
+	UseMockStore = false,
 }
 
 local function deepCopy(value)
@@ -86,7 +88,12 @@ function DataService:Init(remotes)
 
 	self.Initialized = true
 	self.Remotes = remotes
-	self.Store = DataStoreService:GetDataStore(Config.Gameplay.DataStoreName)
+	self.UseMockStore = RunService:IsStudio() and game.GameId == 0
+	if self.UseMockStore then
+		warn("[StreetLegal] Using mock profile storage in Studio because this place is not published.")
+	else
+		self.Store = DataStoreService:GetDataStore(Config.Gameplay.DataStoreName)
+	end
 
 	Players.PlayerAdded:Connect(function(player)
 		self:LoadProfile(player)
@@ -145,9 +152,15 @@ function DataService:LoadProfile(player)
 	end
 
 	local profile = buildDefaultProfile()
-	local ok, savedData = pcall(function()
-		return self.Store:GetAsync(tostring(player.UserId))
-	end)
+	local ok, savedData = true, nil
+	if not self.UseMockStore and self.Store then
+		ok, savedData = pcall(function()
+			return self.Store:GetAsync(tostring(player.UserId))
+		end)
+		if not ok then
+			warn("[StreetLegal] Falling back to default profile for", player.Name, savedData)
+		end
+	end
 
 	if ok and type(savedData) == "table" then
 		profile = reconcile(savedData, buildDefaultProfile())
@@ -165,6 +178,10 @@ function DataService:SaveProfile(player)
 	local profile = self:GetProfile(player)
 	if not profile then
 		return false
+	end
+
+	if self.UseMockStore or not self.Store then
+		return true
 	end
 
 	local payload = deepCopy(profile)
