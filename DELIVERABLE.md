@@ -1,3 +1,13 @@
+Update Addendum — 2026-03-08 UX + Visual Pass
+
+- First spawn now auto-opens the garage and focuses free starter bikes.
+- HUD now keeps a persistent Garage / Spawn Bike button on screen so players are never dumped on foot without direction.
+- If no bike is active, a centered callout explicitly tells the player to select and spawn one.
+- Free-bike flow now centers on one-click `Equip & Spawn` from the garage.
+- Bike visuals were rebuilt into more recognizable electric dirt bike silhouettes using Roblox parts/primitives and per-bike visual presets.
+- Bike names/descriptions were refreshed toward original e-dirt-bike-inspired lineup language instead of generic placeholder bikes.
+- New visual tuning module: `src/ReplicatedStorage/Modules/BikeVisuals.lua`
+
 Assumptions
 
 - Placeholder map art/models are acceptable as long as the Roblox Studio MVP is functional. This build uses primitive-generated geometry so the gameplay loop works immediately.

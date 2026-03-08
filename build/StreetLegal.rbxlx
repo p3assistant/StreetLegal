@@ -40,7 +40,8 @@ end
 local Bikes = {
 	harbor_100 = {
 		Id = "harbor_100",
-		DisplayName = "Harbor 100",
+		DisplayName = "Harbor SX-E",
+		StyleTag = "Compact e-dirt",
 		UnlockType = "Free",
 		Price = 0,
 		GamePassId = 0,
@@ -53,12 +54,13 @@ local Bikes = {
 		Durability = 0.95,
 		IllegalOnStreet = false,
 		PoliceHeatMultiplier = 1,
-		Description = "Balanced starter bike built for learning lines and city hops.",
+		Description = "Compact battery-box ripper with a slim silhouette inspired by lightweight modern e-dirt bikes. Stable, easy to read, and perfect for a first ride.",
 		Paint = Color3.fromRGB(242, 152, 53),
 	},
 	row_125 = {
 		Id = "row_125",
-		DisplayName = "Row 125",
+		DisplayName = "Rowline TR-E",
+		StyleTag = "Tall trail e-moto",
 		UnlockType = "Free",
 		Price = 0,
 		GamePassId = 0,
@@ -71,12 +73,13 @@ local Bikes = {
 		Durability = 0.9,
 		IllegalOnStreet = false,
 		PoliceHeatMultiplier = 1,
-		Description = "Quick starter with more snap for stair sets and park gaps.",
+		Description = "Taller front end, longer seat, and sharper stance for riders who want a more moto-scale electric dirt bike feel right out of the gate.",
 		Paint = Color3.fromRGB(215, 70, 70),
 	},
 	greenway_140 = {
 		Id = "greenway_140",
-		DisplayName = "Greenway 140",
+		DisplayName = "Greenway MX-E",
+		StyleTag = "Freeride e-dirt",
 		UnlockType = "Free",
 		Price = 0,
 		GamePassId = 0,
@@ -89,12 +92,13 @@ local Bikes = {
 		Durability = 0.84,
 		IllegalOnStreet = false,
 		PoliceHeatMultiplier = 1,
-		Description = "Lightweight freeride starter with the best hop response in the free tier.",
+		Description = "Lighter freeride setup with quick steering, a slim tail, and the best hop response in the free lineup.",
 		Paint = Color3.fromRGB(73, 184, 104),
 	},
 	druid_250 = {
 		Id = "druid_250",
-		DisplayName = "Druid 250",
+		DisplayName = "Druid XR-E",
+		StyleTag = "Performance e-dirt",
 		UnlockType = "Cash",
 		Price = 2800,
 		GamePassId = 0,
@@ -107,12 +111,13 @@ local Bikes = {
 		Durability = 1.0,
 		IllegalOnStreet = false,
 		PoliceHeatMultiplier = 1.05,
-		Description = "Mid-tier dirt bike with stronger acceleration and cleaner landings.",
+		Description = "Mid-tier electric dirt machine with stronger pull, better landings, and a more premium race-bike chassis.",
 		Paint = Color3.fromRGB(59, 138, 230),
 	},
 	canal_runner = {
 		Id = "canal_runner",
-		DisplayName = "Canal Runner",
+		DisplayName = "Canal SM-E",
+		StyleTag = "Street-mod e-supermoto",
 		UnlockType = "Cash",
 		Price = 5200,
 		GamePassId = 0,
@@ -125,12 +130,13 @@ local Bikes = {
 		Durability = 0.98,
 		IllegalOnStreet = true,
 		PoliceHeatMultiplier = 1.2,
-		Description = "Street-modified stunt bike. Fast, loud, and very obvious to police.",
+		Description = "Street-modded electric stunt build with 17-ish wheel attitude, fast transitions, and a bigger arrest profile.",
 		Paint = Color3.fromRGB(137, 112, 232),
 	},
 	iron_450 = {
 		Id = "iron_450",
-		DisplayName = "Iron 450",
+		DisplayName = "Iron Apex 450E",
+		StyleTag = "Race e-dirt",
 		UnlockType = "Cash",
 		Price = 9000,
 		GamePassId = 0,
@@ -143,12 +149,13 @@ local Bikes = {
 		Durability = 1.15,
 		IllegalOnStreet = true,
 		PoliceHeatMultiplier = 1.3,
-		Description = "Heavy race-tuned build with brutal pull and a bigger arrest profile.",
+		Description = "Heavy-hitting race-tuned electric dirt bike with long-travel stance, stronger torque, and late-game speed.",
 		Paint = Color3.fromRGB(255, 214, 74),
 	},
 	shoreline_rr = {
 		Id = "shoreline_rr",
-		DisplayName = "Shoreline RR",
+		DisplayName = "Shoreline RR-E",
+		StyleTag = "High-voltage race build",
 		UnlockType = "Cash",
 		Price = 14500,
 		GamePassId = 0,
@@ -161,12 +168,13 @@ local Bikes = {
 		Durability = 1.08,
 		IllegalOnStreet = true,
 		PoliceHeatMultiplier = 1.45,
-		Description = "Late-game speed bike for highway gaps and long coastal runs.",
+		Description = "Top-end high-voltage race chassis with a stretched silhouette for long fast runs and big transfers.",
 		Paint = Color3.fromRGB(248, 248, 248),
 	},
 	blue_line = {
 		Id = "blue_line",
-		DisplayName = "Blue Line Special",
+		DisplayName = "Blue Line Interceptor E",
+		StyleTag = "Premium pursuit special",
 		UnlockType = "Gamepass",
 		Price = 0,
 		GamePassId = 0,
@@ -179,7 +187,7 @@ local Bikes = {
 		Durability = 1.05,
 		IllegalOnStreet = true,
 		PoliceHeatMultiplier = 1.35,
-		Description = "Optional premium cosmetic-performance hybrid hook. GamePassId is a placeholder by default.",
+		Description = "Premium electric pursuit-inspired special with sharper handling and a clean blue-black commuter-race silhouette.",
 		Paint = Color3.fromRGB(54, 163, 255),
 	},
 }
@@ -190,14 +198,286 @@ return Bikes
       </Item>
       <Item class="ModuleScript" referent="4">
         <Properties>
+          <string name="Name">BikeVisuals</string>
+          <string name="Source"><![CDATA[local function deepMerge(base, overrides)
+	local merged = {}
+	for key, value in pairs(base) do
+		if type(value) == "table" then
+			merged[key] = deepMerge(value, {})
+		else
+			merged[key] = value
+		end
+	end
+
+	for key, value in pairs(overrides or {}) do
+		if type(value) == "table" and type(merged[key]) == "table" then
+			merged[key] = deepMerge(merged[key], value)
+		else
+			merged[key] = value
+		end
+	end
+
+	return merged
+end
+
+local baseProfile = {
+	Geometry = {
+		Wheelbase = 5.55,
+		FrontWheelRadius = 1.18,
+		RearWheelRadius = 1.24,
+		WheelThickness = 0.56,
+		FrontAxleY = 0.60,
+		RearAxleY = 0.62,
+		SeatHeight = 2.24,
+		SeatLength = 2.1,
+		SeatZ = 0.52,
+		BatterySize = Vector3.new(1.12, 1.48, 1.46),
+		BatteryY = 1.55,
+		BatteryZ = 0.12,
+		HeadTubeY = 2.16,
+		HeadTubeZ = -1.44,
+		HeadTubeTilt = -24,
+		FrontFenderY = 1.92,
+		FrontFenderZ = -2.12,
+		FrontFenderPitch = 10,
+		RearFenderY = 2.18,
+		RearFenderZ = 1.96,
+		RearFenderPitch = -5,
+		TailRise = 8,
+		HandleWidth = 2.62,
+		HandleY = 2.55,
+		HandleZ = -1.78,
+		ForkSpread = 0.54,
+		ForkPitch = -18,
+		FrameWidth = 0.44,
+		SwingarmLength = 2.12,
+		SwingarmRise = 15,
+		MotorY = 0.98,
+		MotorZ = 0.32,
+	},
+	Colors = {
+		Primary = Color3.fromRGB(232, 232, 232),
+		Accent = Color3.fromRGB(255, 170, 60),
+		Frame = Color3.fromRGB(57, 60, 68),
+		Battery = Color3.fromRGB(36, 39, 44),
+		Seat = Color3.fromRGB(24, 24, 24),
+		Fork = Color3.fromRGB(204, 183, 108),
+		Trim = Color3.fromRGB(154, 160, 166),
+		Rim = Color3.fromRGB(72, 76, 84),
+		Headlight = Color3.fromRGB(255, 247, 196),
+		Taillight = Color3.fromRGB(255, 91, 91),
+	},
+}
+
+local profiles = {
+	harbor_100 = deepMerge(baseProfile, {
+		Geometry = {
+			Wheelbase = 5.35,
+			SeatHeight = 2.12,
+			SeatLength = 1.96,
+			HeadTubeZ = -1.34,
+			HeadTubeTilt = -27,
+			HandleWidth = 2.56,
+			TailRise = 6,
+		},
+		Colors = {
+			Primary = Color3.fromRGB(242, 152, 53),
+			Accent = Color3.fromRGB(255, 209, 112),
+			Frame = Color3.fromRGB(42, 44, 49),
+			Battery = Color3.fromRGB(25, 27, 31),
+			Seat = Color3.fromRGB(26, 26, 26),
+			Fork = Color3.fromRGB(208, 188, 112),
+			Trim = Color3.fromRGB(129, 134, 141),
+			Rim = Color3.fromRGB(64, 66, 72),
+		},
+	}),
+	row_125 = deepMerge(baseProfile, {
+		Geometry = {
+			Wheelbase = 5.78,
+			FrontWheelRadius = 1.2,
+			RearWheelRadius = 1.26,
+			SeatHeight = 2.28,
+			SeatLength = 2.18,
+			HeadTubeY = 2.2,
+			HeadTubeTilt = -22,
+			FrontFenderY = 1.98,
+			HandleWidth = 2.72,
+			TailRise = 10,
+		},
+		Colors = {
+			Primary = Color3.fromRGB(215, 70, 70),
+			Accent = Color3.fromRGB(255, 229, 229),
+			Frame = Color3.fromRGB(45, 47, 52),
+			Battery = Color3.fromRGB(33, 36, 41),
+			Seat = Color3.fromRGB(28, 28, 28),
+			Fork = Color3.fromRGB(199, 199, 206),
+			Trim = Color3.fromRGB(155, 161, 170),
+			Rim = Color3.fromRGB(74, 77, 84),
+		},
+	}),
+	greenway_140 = deepMerge(baseProfile, {
+		Geometry = {
+			Wheelbase = 5.48,
+			FrontWheelRadius = 1.16,
+			RearWheelRadius = 1.22,
+			SeatHeight = 2.18,
+			HeadTubeTilt = -25,
+			FrontFenderPitch = 14,
+			RearFenderPitch = -8,
+			HandleWidth = 2.58,
+			TailRise = 12,
+		},
+		Colors = {
+			Primary = Color3.fromRGB(73, 184, 104),
+			Accent = Color3.fromRGB(203, 255, 215),
+			Frame = Color3.fromRGB(35, 43, 38),
+			Battery = Color3.fromRGB(22, 27, 24),
+			Seat = Color3.fromRGB(24, 24, 24),
+			Fork = Color3.fromRGB(191, 203, 192),
+			Trim = Color3.fromRGB(156, 166, 157),
+			Rim = Color3.fromRGB(57, 65, 60),
+		},
+	}),
+	druid_250 = deepMerge(baseProfile, {
+		Geometry = {
+			Wheelbase = 5.72,
+			FrontWheelRadius = 1.22,
+			RearWheelRadius = 1.28,
+			SeatHeight = 2.3,
+			HeadTubeY = 2.23,
+			HeadTubeTilt = -21,
+			TailRise = 11,
+			HandleWidth = 2.74,
+		},
+		Colors = {
+			Primary = Color3.fromRGB(59, 138, 230),
+			Accent = Color3.fromRGB(200, 229, 255),
+			Frame = Color3.fromRGB(33, 40, 54),
+			Battery = Color3.fromRGB(22, 26, 34),
+			Seat = Color3.fromRGB(24, 24, 26),
+			Fork = Color3.fromRGB(204, 212, 224),
+			Trim = Color3.fromRGB(150, 165, 184),
+			Rim = Color3.fromRGB(54, 62, 76),
+		},
+	}),
+	canal_runner = deepMerge(baseProfile, {
+		Geometry = {
+			Wheelbase = 5.82,
+			FrontWheelRadius = 1.12,
+			RearWheelRadius = 1.15,
+			FrontAxleY = 0.56,
+			RearAxleY = 0.57,
+			SeatHeight = 2.16,
+			SeatLength = 2.22,
+			HeadTubeTilt = -18,
+			FrontFenderY = 1.74,
+			FrontFenderPitch = 4,
+			RearFenderY = 2.08,
+			TailRise = 5,
+			HandleWidth = 2.7,
+		},
+		Colors = {
+			Primary = Color3.fromRGB(137, 112, 232),
+			Accent = Color3.fromRGB(228, 214, 255),
+			Frame = Color3.fromRGB(41, 38, 54),
+			Battery = Color3.fromRGB(25, 24, 33),
+			Seat = Color3.fromRGB(30, 30, 34),
+			Fork = Color3.fromRGB(205, 197, 232),
+			Trim = Color3.fromRGB(170, 164, 197),
+			Rim = Color3.fromRGB(61, 58, 77),
+		},
+	}),
+	iron_450 = deepMerge(baseProfile, {
+		Geometry = {
+			Wheelbase = 5.95,
+			FrontWheelRadius = 1.24,
+			RearWheelRadius = 1.3,
+			SeatHeight = 2.34,
+			SeatLength = 2.16,
+			HeadTubeY = 2.25,
+			HeadTubeTilt = -20,
+			FrontFenderPitch = 8,
+			RearFenderPitch = -4,
+			TailRise = 13,
+			HandleWidth = 2.76,
+		},
+		Colors = {
+			Primary = Color3.fromRGB(255, 214, 74),
+			Accent = Color3.fromRGB(255, 244, 193),
+			Frame = Color3.fromRGB(44, 44, 45),
+			Battery = Color3.fromRGB(28, 28, 28),
+			Seat = Color3.fromRGB(22, 22, 22),
+			Fork = Color3.fromRGB(218, 204, 136),
+			Trim = Color3.fromRGB(162, 156, 133),
+			Rim = Color3.fromRGB(73, 70, 61),
+		},
+	}),
+	shoreline_rr = deepMerge(baseProfile, {
+		Geometry = {
+			Wheelbase = 6.04,
+			FrontWheelRadius = 1.2,
+			RearWheelRadius = 1.22,
+			SeatHeight = 2.22,
+			SeatLength = 2.28,
+			HeadTubeTilt = -17,
+			FrontFenderPitch = 2,
+			RearFenderPitch = -2,
+			TailRise = 7,
+			HandleWidth = 2.68,
+		},
+		Colors = {
+			Primary = Color3.fromRGB(248, 248, 248),
+			Accent = Color3.fromRGB(137, 221, 255),
+			Frame = Color3.fromRGB(53, 60, 70),
+			Battery = Color3.fromRGB(33, 39, 46),
+			Seat = Color3.fromRGB(26, 26, 26),
+			Fork = Color3.fromRGB(208, 217, 224),
+			Trim = Color3.fromRGB(157, 176, 189),
+			Rim = Color3.fromRGB(77, 86, 95),
+		},
+	}),
+	blue_line = deepMerge(baseProfile, {
+		Geometry = {
+			Wheelbase = 5.88,
+			FrontWheelRadius = 1.16,
+			RearWheelRadius = 1.2,
+			SeatHeight = 2.18,
+			SeatLength = 2.18,
+			HeadTubeTilt = -19,
+			FrontFenderPitch = 6,
+			RearFenderPitch = -3,
+			TailRise = 6,
+			HandleWidth = 2.7,
+		},
+		Colors = {
+			Primary = Color3.fromRGB(54, 163, 255),
+			Accent = Color3.fromRGB(195, 231, 255),
+			Frame = Color3.fromRGB(28, 38, 52),
+			Battery = Color3.fromRGB(20, 25, 32),
+			Seat = Color3.fromRGB(21, 24, 28),
+			Fork = Color3.fromRGB(186, 206, 221),
+			Trim = Color3.fromRGB(126, 153, 170),
+			Rim = Color3.fromRGB(48, 59, 71),
+		},
+	}),
+}
+
+profiles.default = baseProfile
+
+return profiles
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="5">
+        <Properties>
           <string name="Name">Config</string>
           <string name="Source"><![CDATA[local RunService = game:GetService("RunService")
 
 local Config = {
 	Experience = {
 		Name = "Street Legal",
-		Version = "0.1.0",
-		Build = "mvp-production",
+		Version = "0.2.0",
+		Build = "ux-visual-pass",
 	},
 	Gameplay = {
 		DataStoreName = "StreetLegal_PlayerData_v1",
@@ -283,7 +563,7 @@ return Config
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="5">
+      <Item class="ModuleScript" referent="6">
         <Properties>
           <string name="Name">WantedConfig</string>
           <string name="Source"><![CDATA[local WantedConfig = {
@@ -316,11 +596,11 @@ return WantedConfig
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="6">
+    <Item class="Folder" referent="7">
       <Properties>
         <string name="Name">Remotes</string>
       </Properties>
-      <Item class="ModuleScript" referent="7">
+      <Item class="ModuleScript" referent="8">
         <Properties>
           <string name="Name">Manifest</string>
           <string name="Source"><![CDATA[return {
@@ -336,11 +616,11 @@ return WantedConfig
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="8">
+  <Item class="ServerScriptService" referent="9">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Script" referent="9">
+    <Item class="Script" referent="10">
       <Properties>
         <string name="Name">Bootstrap</string>
         <token name="RunContext">0</token>
@@ -376,11 +656,11 @@ ReplicatedStorage:SetAttribute("StreetLegalBootstrapReady", true)
 ]]></string>
       </Properties>
     </Item>
-    <Item class="Folder" referent="10">
+    <Item class="Folder" referent="11">
       <Properties>
         <string name="Name">Services</string>
       </Properties>
-      <Item class="ModuleScript" referent="11">
+      <Item class="ModuleScript" referent="12">
         <Properties>
           <string name="Name">DataService</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -640,7 +920,7 @@ return DataService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="12">
+      <Item class="ModuleScript" referent="13">
         <Properties>
           <string name="Name">PoliceService</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -922,7 +1202,7 @@ return PoliceService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="13">
+      <Item class="ModuleScript" referent="14">
         <Properties>
           <string name="Name">PurchaseService</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -932,6 +1212,7 @@ local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Modules.Config)
 local BikeDefinitions = require(ReplicatedStorage.Modules.BikeDefinitions)
+local BikeVisuals = require(ReplicatedStorage.Modules.BikeVisuals)
 
 local PurchaseService = {
 	ActiveBikes = {},
@@ -955,20 +1236,52 @@ local function createWeld(parent, part0, part1)
 	return weld
 end
 
-local function createPart(parent, name, size, cframe, color, material, transparency)
-	local part = Instance.new("Part")
+local function createPart(parent, className, name, size, cframe, color, material, options)
+	local part = Instance.new(className or "Part")
 	part.Name = name
 	part.Size = size
 	part.CFrame = cframe
-	part.Color = color
+	part.Color = color or Color3.fromRGB(255, 255, 255)
 	part.Material = material or Enum.Material.Metal
 	part.TopSurface = Enum.SurfaceType.Smooth
 	part.BottomSurface = Enum.SurfaceType.Smooth
-	part.CanCollide = true
+	part.CanCollide = options and options.CanCollide or false
 	part.Anchored = false
-	part.Transparency = transparency or 0
+	part.Transparency = options and options.Transparency or 0
+	part.Massless = if options and options.Massless ~= nil then options.Massless else true
+	part.CastShadow = if options and options.CastShadow ~= nil then options.CastShadow else true
+	if part:IsA("Part") and options and options.Shape then
+		part.Shape = options.Shape
+	end
 	part.Parent = parent
 	return part
+end
+
+local function toWorldPosition(origin, localPosition)
+	return (origin * CFrame.new(localPosition.X, localPosition.Y, localPosition.Z)).Position
+end
+
+local function createBeam(parent, rootPart, origin, name, localA, localB, thickness, color, material)
+	local worldA = toWorldPosition(origin, localA)
+	local worldB = toWorldPosition(origin, localB)
+	local delta = worldB - worldA
+	local length = delta.Magnitude
+	if length <= 0.01 then
+		return nil
+	end
+
+	local beam = createPart(
+		parent,
+		"Part",
+		name,
+		Vector3.new(thickness, thickness, length),
+		CFrame.lookAt((worldA + worldB) * 0.5, worldB),
+		color,
+		material,
+		{ CanCollide = false, Massless = true }
+	)
+	createWeld(beam, rootPart, beam)
+	return beam
 end
 
 local function getRuntimeFolder()
@@ -994,6 +1307,7 @@ local function copyBikeForClient(_, bikeId)
 	local payload = {
 		Id = bike.Id,
 		DisplayName = bike.DisplayName,
+		StyleTag = bike.StyleTag,
 		UnlockType = bike.UnlockType,
 		Price = bike.Price,
 		GamePassId = bike.GamePassId,
@@ -1007,6 +1321,11 @@ local function copyBikeForClient(_, bikeId)
 		Description = bike.Description,
 	}
 	return payload
+end
+
+local function setPlayerBikeAttributes(player, activeBikeId)
+	player:SetAttribute("StreetLegalActiveBikeId", activeBikeId)
+	player:SetAttribute("StreetLegalMounted", false)
 end
 
 function PurchaseService:Init(dataService, wantedService, remotes)
@@ -1044,6 +1363,15 @@ function PurchaseService:Init(dataService, wantedService, remotes)
 		end
 	end)
 
+	local function initializePlayer(player)
+		setPlayerBikeAttributes(player, nil)
+	end
+
+	Players.PlayerAdded:Connect(initializePlayer)
+	for _, player in ipairs(Players:GetPlayers()) do
+		initializePlayer(player)
+	end
+
 	Players.PlayerRemoving:Connect(function(player)
 		self:DespawnBike(player)
 	end)
@@ -1059,6 +1387,9 @@ function PurchaseService:GetCatalog(player)
 
 	table.sort(catalog, function(a, b)
 		if a.Tier == b.Tier then
+			if a.Price == b.Price then
+				return a.DisplayName < b.DisplayName
+			end
 			return a.Price < b.Price
 		end
 		return a.Tier < b.Tier
@@ -1072,6 +1403,7 @@ function PurchaseService:GetGarageState(player)
 		Success = true,
 		Catalog = self:GetCatalog(player),
 		Snapshot = self.DataService:GetClientSnapshot(player),
+		ActiveBikeId = player:GetAttribute("StreetLegalActiveBikeId"),
 	}
 end
 
@@ -1080,7 +1412,10 @@ function PurchaseService:GetSpawnCFrame(player)
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 	if rootPart then
 		local forward = rootPart.CFrame.LookVector
-		return CFrame.new(rootPart.Position + (forward * Config.Gameplay.TeleportSpawnOffset) + Vector3.new(0, Config.Gameplay.BikeRespawnHeight, 0), rootPart.Position + (forward * 60))
+		return CFrame.new(
+			rootPart.Position + (forward * Config.Gameplay.TeleportSpawnOffset) + Vector3.new(0, Config.Gameplay.BikeRespawnHeight, 0),
+			rootPart.Position + (forward * 60)
+		)
 	end
 
 	local spawns = Workspace:FindFirstChild("Spawns")
@@ -1107,6 +1442,12 @@ end
 
 function PurchaseService:CreateBikeModel(player, bikeId)
 	local bike = BikeDefinitions[bikeId]
+	local visual = BikeVisuals[bikeId] or BikeVisuals.default
+	local g = visual.Geometry
+	local c = visual.Colors
+	local paint = bike.Paint or c.Primary
+	local spawnCFrame = self:GetSpawnCFrame(player)
+
 	local model = Instance.new("Model")
 	model.Name = string.format("%s_%d", bikeId, player.UserId)
 	model:SetAttribute("StreetLegalBike", true)
@@ -1116,40 +1457,157 @@ function PurchaseService:CreateBikeModel(player, bikeId)
 	model:SetAttribute("TopSpeedStuds", bike.TopSpeedStuds)
 	model:SetAttribute("SpawnTime", now())
 
-	local spawnCFrame = self:GetSpawnCFrame(player)
-	local paint = bike.Paint or Color3.fromRGB(255, 255, 255)
-
-	local hull = createPart(model, "Hull", Vector3.new(4.2, 1.2, 7), spawnCFrame, paint, Enum.Material.SmoothPlastic, 1)
-	hull.CustomPhysicalProperties = PhysicalProperties.new(1.2, 0.8, 0.1, 1, 1)
+	local hull = createPart(
+		model,
+		"Part",
+		"Hull",
+		Vector3.new(2.0, 1.4, g.Wheelbase + 0.7),
+		spawnCFrame * CFrame.new(0, 0.62, 0),
+		paint,
+		Enum.Material.SmoothPlastic,
+		{ Transparency = 1, CanCollide = true, Massless = false, CastShadow = false }
+	)
+	hull.CustomPhysicalProperties = PhysicalProperties.new(1.15, 0.8, 0.1, 1, 1)
 	model.PrimaryPart = hull
 
-	local frame = createPart(model, "Frame", Vector3.new(1.4, 1, 5), spawnCFrame * CFrame.new(0, 1.2, 0), paint, Enum.Material.Metal, 0)
-	local tank = createPart(model, "Tank", Vector3.new(1.6, 1.4, 1.8), spawnCFrame * CFrame.new(0, 1.9, -0.2), paint, Enum.Material.SmoothPlastic, 0)
-	local handle = createPart(model, "HandleBar", Vector3.new(3.2, 0.3, 0.3), spawnCFrame * CFrame.new(0, 2.35, -1.65), Color3.fromRGB(35, 35, 35), Enum.Material.Metal, 0)
-	local rearWheel = createPart(model, "RearWheel", Vector3.new(2.4, 2.4, 0.8), spawnCFrame * CFrame.new(0, 1.1, 2.35) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(28, 28, 28), Enum.Material.Rubber, 0)
-	local frontWheel = createPart(model, "FrontWheel", Vector3.new(2.2, 2.2, 0.7), spawnCFrame * CFrame.new(0, 1.1, -2.3) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(28, 28, 28), Enum.Material.Rubber, 0)
-	rearWheel.Shape = Enum.PartType.Cylinder
-	frontWheel.Shape = Enum.PartType.Cylinder
-	local skidLeft = createPart(model, "SkidLeft", Vector3.new(0.6, 0.6, 3.5), spawnCFrame * CFrame.new(-1.5, 0.6, 0), paint, Enum.Material.SmoothPlastic, 1)
-	local skidRight = createPart(model, "SkidRight", Vector3.new(0.6, 0.6, 3.5), spawnCFrame * CFrame.new(1.5, 0.6, 0), paint, Enum.Material.SmoothPlastic, 1)
-
-	for _, part in ipairs({ frame, tank, handle, rearWheel, frontWheel, skidLeft, skidRight }) do
+	local function decorPart(name, size, localPosition, color, material, options)
+		local rotation = options and options.Rotation or Vector3.zero
+		local cf = spawnCFrame
+			* CFrame.new(localPosition.X, localPosition.Y, localPosition.Z)
+			* CFrame.Angles(math.rad(rotation.X), math.rad(rotation.Y), math.rad(rotation.Z))
+		local part = createPart(model, options and options.ClassName or "Part", name, size, cf, color, material, {
+			CanCollide = false,
+			Massless = true,
+			Transparency = options and options.Transparency or 0,
+			Shape = options and options.Shape or nil,
+			CastShadow = options and options.CastShadow,
+		})
 		createWeld(part, hull, part)
+		return part
 	end
+
+	local rearWheelZ = g.Wheelbase * 0.5
+	local frontWheelZ = -g.Wheelbase * 0.5
+	local rearWheel = decorPart(
+		"RearWheel",
+		Vector3.new(g.WheelThickness, g.RearWheelRadius * 2, g.RearWheelRadius * 2),
+		Vector3.new(0, g.RearAxleY, rearWheelZ),
+		Color3.fromRGB(26, 26, 26),
+		Enum.Material.Rubber,
+		{ Shape = Enum.PartType.Cylinder }
+	)
+	local frontWheel = decorPart(
+		"FrontWheel",
+		Vector3.new(g.WheelThickness, g.FrontWheelRadius * 2, g.FrontWheelRadius * 2),
+		Vector3.new(0, g.FrontAxleY, frontWheelZ),
+		Color3.fromRGB(26, 26, 26),
+		Enum.Material.Rubber,
+		{ Shape = Enum.PartType.Cylinder }
+	)
+	decorPart(
+		"RearRim",
+		Vector3.new(g.WheelThickness * 0.55, g.RearWheelRadius * 1.42, g.RearWheelRadius * 1.42),
+		Vector3.new(0, g.RearAxleY, rearWheelZ),
+		c.Rim,
+		Enum.Material.Metal,
+		{ Shape = Enum.PartType.Cylinder }
+	)
+	decorPart(
+		"FrontRim",
+		Vector3.new(g.WheelThickness * 0.55, g.FrontWheelRadius * 1.42, g.FrontWheelRadius * 1.42),
+		Vector3.new(0, g.FrontAxleY, frontWheelZ),
+		c.Rim,
+		Enum.Material.Metal,
+		{ Shape = Enum.PartType.Cylinder }
+	)
+	decorPart(
+		"RearHub",
+		Vector3.new(g.WheelThickness * 0.42, g.RearWheelRadius * 0.42, g.RearWheelRadius * 0.42),
+		Vector3.new(0, g.RearAxleY, rearWheelZ),
+		c.Trim,
+		Enum.Material.Metal,
+		{ Shape = Enum.PartType.Cylinder }
+	)
+	decorPart(
+		"FrontHub",
+		Vector3.new(g.WheelThickness * 0.42, g.FrontWheelRadius * 0.42, g.FrontWheelRadius * 0.42),
+		Vector3.new(0, g.FrontAxleY, frontWheelZ),
+		c.Trim,
+		Enum.Material.Metal,
+		{ Shape = Enum.PartType.Cylinder }
+	)
 
 	local seat = Instance.new("VehicleSeat")
 	seat.Name = "Seat"
-	seat.Size = Vector3.new(2, 1, 2)
-	seat.CFrame = spawnCFrame * CFrame.new(0, 2.2, 0.6)
-	seat.Color = Color3.fromRGB(30, 30, 30)
+	seat.Size = Vector3.new(1.2, 0.42, g.SeatLength)
+	seat.CFrame = spawnCFrame * CFrame.new(0, g.SeatHeight, g.SeatZ)
+	seat.Color = c.Seat
 	seat.Material = Enum.Material.SmoothPlastic
 	seat.TopSurface = Enum.SurfaceType.Smooth
 	seat.BottomSurface = Enum.SurfaceType.Smooth
+	seat.CanCollide = true
 	seat.MaxSpeed = 0
 	seat.Torque = 0
 	seat.TurnSpeed = 0
 	seat.Parent = model
 	createWeld(seat, hull, seat)
+
+	decorPart("BatteryBox", g.BatterySize, Vector3.new(0, g.BatteryY, g.BatteryZ), c.Battery, Enum.Material.SmoothPlastic)
+	decorPart("BatteryCap", Vector3.new(g.BatterySize.X * 0.88, 0.16, g.BatterySize.Z * 0.78), Vector3.new(0, g.BatteryY + (g.BatterySize.Y * 0.5) + 0.06, g.BatteryZ - 0.08), c.Trim, Enum.Material.Metal)
+	decorPart("Controller", Vector3.new(0.62, 0.26, 0.62), Vector3.new(0, g.BatteryY + 0.88, g.BatteryZ + 0.36), c.Trim, Enum.Material.Metal)
+	decorPart("Motor", Vector3.new(0.96, 0.66, 0.88), Vector3.new(0, g.MotorY, g.MotorZ), c.Trim, Enum.Material.Metal)
+	decorPart("FrontPlate", Vector3.new(0.92, 1.02, 0.12), Vector3.new(0, g.HeadTubeY + 0.02, g.HeadTubeZ - 0.56), c.Accent, Enum.Material.SmoothPlastic, {
+		Rotation = Vector3.new(g.HeadTubeTilt, 0, 0),
+	})
+	decorPart("Headlight", Vector3.new(0.46, 0.24, 0.08), Vector3.new(0, g.HeadTubeY + 0.06, g.HeadTubeZ - 0.64), c.Headlight, Enum.Material.Neon, {
+		Rotation = Vector3.new(g.HeadTubeTilt, 0, 0),
+	})
+	decorPart("TailLight", Vector3.new(0.34, 0.1, 0.14), Vector3.new(0, g.RearFenderY + 0.04, g.RearFenderZ + 0.52), c.Taillight, Enum.Material.Neon)
+
+	decorPart("TopShroud", Vector3.new(1.02, 0.22, 1.08), Vector3.new(0, g.BatteryY + 0.78, g.BatteryZ - 0.46), paint, Enum.Material.SmoothPlastic, {
+		Rotation = Vector3.new(-14, 0, 0),
+	})
+	decorPart("FrontFender", Vector3.new(0.62, 0.14, 1.62), Vector3.new(0, g.FrontFenderY, g.FrontFenderZ), paint, Enum.Material.SmoothPlastic, {
+		Rotation = Vector3.new(g.FrontFenderPitch, 0, 0),
+	})
+	decorPart("RearFender", Vector3.new(0.72, 0.16, 1.46), Vector3.new(0, g.RearFenderY, g.RearFenderZ), c.Accent, Enum.Material.SmoothPlastic, {
+		Rotation = Vector3.new(g.RearFenderPitch, 0, 0),
+	})
+	decorPart("ChainGuard", Vector3.new(0.18, 0.22, 1.36), Vector3.new(0.56, g.RearAxleY + 0.22, rearWheelZ - 0.58), c.Trim, Enum.Material.Metal, {
+		Rotation = Vector3.new(4, 0, -6),
+	})
+	decorPart("SkidPlate", Vector3.new(0.9, 0.14, 1.12), Vector3.new(0, g.MotorY - 0.5, g.MotorZ + 0.08), c.Frame, Enum.Material.Metal, {
+		Rotation = Vector3.new(7, 0, 0),
+	})
+	decorPart("StemBlock", Vector3.new(0.54, 0.44, 0.4), Vector3.new(0, g.HeadTubeY + 0.36, g.HeadTubeZ - 0.08), c.Frame, Enum.Material.Metal, {
+		Rotation = Vector3.new(g.HeadTubeTilt, 0, 0),
+	})
+	decorPart("HandleBar", Vector3.new(g.HandleWidth, 0.16, 0.16), Vector3.new(0, g.HandleY, g.HandleZ), c.Trim, Enum.Material.Metal)
+	decorPart("GripLeft", Vector3.new(0.22, 0.18, 0.42), Vector3.new(-(g.HandleWidth * 0.5) - 0.08, g.HandleY, g.HandleZ), Color3.fromRGB(18, 18, 18), Enum.Material.Rubber)
+	decorPart("GripRight", Vector3.new(0.22, 0.18, 0.42), Vector3.new((g.HandleWidth * 0.5) + 0.08, g.HandleY, g.HandleZ), Color3.fromRGB(18, 18, 18), Enum.Material.Rubber)
+	decorPart("SidePlateLeft", Vector3.new(0.08, 0.76, 1.06), Vector3.new(-(g.BatterySize.X * 0.5) - 0.1, g.BatteryY + 0.1, g.BatteryZ - 0.06), paint, Enum.Material.SmoothPlastic, {
+		Rotation = Vector3.new(0, 8, 0),
+	})
+	decorPart("SidePlateRight", Vector3.new(0.08, 0.76, 1.06), Vector3.new((g.BatterySize.X * 0.5) + 0.1, g.BatteryY + 0.1, g.BatteryZ - 0.06), paint, Enum.Material.SmoothPlastic, {
+		Rotation = Vector3.new(0, -8, 0),
+	})
+
+	local frameWidth = g.FrameWidth
+	local forkHalf = g.ForkSpread * 0.5
+	createBeam(model, hull, spawnCFrame, "TopRailLeft", Vector3.new(frameWidth, g.SeatHeight - 0.1, g.SeatZ - (g.SeatLength * 0.5) + 0.1), Vector3.new(frameWidth * 0.7, g.HeadTubeY + 0.34, g.HeadTubeZ + 0.12), 0.16, c.Frame, Enum.Material.Metal)
+	createBeam(model, hull, spawnCFrame, "TopRailRight", Vector3.new(-frameWidth, g.SeatHeight - 0.1, g.SeatZ - (g.SeatLength * 0.5) + 0.1), Vector3.new(-frameWidth * 0.7, g.HeadTubeY + 0.34, g.HeadTubeZ + 0.12), 0.16, c.Frame, Enum.Material.Metal)
+	createBeam(model, hull, spawnCFrame, "DownTubeLeft", Vector3.new(frameWidth * 0.72, g.HeadTubeY - 0.22, g.HeadTubeZ + 0.02), Vector3.new(frameWidth * 0.52, g.MotorY + 0.12, g.MotorZ + 0.16), 0.17, c.Frame, Enum.Material.Metal)
+	createBeam(model, hull, spawnCFrame, "DownTubeRight", Vector3.new(-frameWidth * 0.72, g.HeadTubeY - 0.22, g.HeadTubeZ + 0.02), Vector3.new(-frameWidth * 0.52, g.MotorY + 0.12, g.MotorZ + 0.16), 0.17, c.Frame, Enum.Material.Metal)
+	createBeam(model, hull, spawnCFrame, "LowerRailLeft", Vector3.new(frameWidth * 0.55, g.MotorY - 0.16, g.MotorZ + 0.52), Vector3.new(frameWidth * 0.72, g.RearAxleY + 0.16, rearWheelZ - 0.52), 0.17, c.Frame, Enum.Material.Metal)
+	createBeam(model, hull, spawnCFrame, "LowerRailRight", Vector3.new(-frameWidth * 0.55, g.MotorY - 0.16, g.MotorZ + 0.52), Vector3.new(-frameWidth * 0.72, g.RearAxleY + 0.16, rearWheelZ - 0.52), 0.17, c.Frame, Enum.Material.Metal)
+	createBeam(model, hull, spawnCFrame, "SeatStayLeft", Vector3.new(frameWidth, g.SeatHeight - 0.22, g.SeatZ + (g.SeatLength * 0.5) - 0.1), Vector3.new(frameWidth * 0.9, g.RearAxleY + 0.4, rearWheelZ - 0.12), 0.15, c.Frame, Enum.Material.Metal)
+	createBeam(model, hull, spawnCFrame, "SeatStayRight", Vector3.new(-frameWidth, g.SeatHeight - 0.22, g.SeatZ + (g.SeatLength * 0.5) - 0.1), Vector3.new(-frameWidth * 0.9, g.RearAxleY + 0.4, rearWheelZ - 0.12), 0.15, c.Frame, Enum.Material.Metal)
+	createBeam(model, hull, spawnCFrame, "SwingArmLeft", Vector3.new(frameWidth + 0.2, g.MotorY - 0.22, g.MotorZ + 0.72), Vector3.new(frameWidth + 0.26, g.RearAxleY + 0.06, rearWheelZ), 0.22, c.Trim, Enum.Material.Metal)
+	createBeam(model, hull, spawnCFrame, "SwingArmRight", Vector3.new(-(frameWidth + 0.2), g.MotorY - 0.22, g.MotorZ + 0.72), Vector3.new(-(frameWidth + 0.26), g.RearAxleY + 0.06, rearWheelZ), 0.22, c.Trim, Enum.Material.Metal)
+	createBeam(model, hull, spawnCFrame, "ForkLeft", Vector3.new(-forkHalf, g.HeadTubeY - 0.08, g.HeadTubeZ - 0.1), Vector3.new(-forkHalf, g.FrontAxleY + 0.04, frontWheelZ + 0.06), 0.16, c.Fork, Enum.Material.Metal)
+	createBeam(model, hull, spawnCFrame, "ForkRight", Vector3.new(forkHalf, g.HeadTubeY - 0.08, g.HeadTubeZ - 0.1), Vector3.new(forkHalf, g.FrontAxleY + 0.04, frontWheelZ + 0.06), 0.16, c.Fork, Enum.Material.Metal)
+	createBeam(model, hull, spawnCFrame, "ForkBrace", Vector3.new(-forkHalf, g.FrontAxleY + 0.5, frontWheelZ + 0.18), Vector3.new(forkHalf, g.FrontAxleY + 0.5, frontWheelZ + 0.18), 0.18, c.Trim, Enum.Material.Metal)
+	createBeam(model, hull, spawnCFrame, "RearShock", Vector3.new(0, g.SeatHeight - 0.25, g.SeatZ + 0.2), Vector3.new(0, g.RearAxleY + 0.44, rearWheelZ - 0.56), 0.14, c.Accent, Enum.Material.Metal)
 
 	local bodyAttachment = Instance.new("Attachment")
 	bodyAttachment.Name = "BodyAttachment"
@@ -1220,8 +1678,7 @@ function PurchaseService:DespawnBike(player)
 		active:Destroy()
 	end
 	self.ActiveBikes[player] = nil
-	player:SetAttribute("StreetLegalActiveBikeId", nil)
-	player:SetAttribute("StreetLegalMounted", false)
+	setPlayerBikeAttributes(player, nil)
 	return true
 end
 
@@ -1255,6 +1712,7 @@ function PurchaseService:SpawnBike(player, bikeId)
 		Success = true,
 		Message = string.format("Spawned %s.", BikeDefinitions[bikeId].DisplayName),
 		BikeId = bikeId,
+		Snapshot = self.DataService:GetClientSnapshot(player),
 	}
 end
 
@@ -1266,6 +1724,12 @@ function PurchaseService:BuyBike(player, bikeId)
 
 	if self.DataService:OwnsBike(player, bikeId) then
 		return { Success = true, Message = "Bike already owned.", Snapshot = self.DataService:GetClientSnapshot(player) }
+	end
+
+	if bike.UnlockType == "Free" then
+		self.DataService:GrantBike(player, bikeId)
+		self.DataService:SetEquippedBike(player, bikeId)
+		return { Success = true, Message = string.format("Unlocked %s.", bike.DisplayName), Snapshot = self.DataService:GetClientSnapshot(player) }
 	end
 
 	if bike.UnlockType == "Cash" then
@@ -1314,6 +1778,24 @@ function PurchaseService:EquipBike(player, bikeId)
 	return { Success = true, Message = string.format("Equipped %s.", BikeDefinitions[bikeId].DisplayName), Snapshot = self.DataService:GetClientSnapshot(player) }
 end
 
+function PurchaseService:EquipAndSpawnBike(player, bikeId)
+	local bike = BikeDefinitions[bikeId]
+	if not bike then
+		return { Success = false, Message = "Unknown bike." }
+	end
+
+	if not self.DataService:OwnsBike(player, bikeId) then
+		if bike.UnlockType == "Free" then
+			self.DataService:GrantBike(player, bikeId)
+		else
+			return { Success = false, Message = "Bike not owned." }
+		end
+	end
+
+	self.DataService:SetEquippedBike(player, bikeId)
+	return self:SpawnBike(player, bikeId)
+end
+
 function PurchaseService:HandleBikeAction(player, action, payload)
 	payload = payload or {}
 	local profile = self.DataService:GetProfile(player)
@@ -1328,12 +1810,14 @@ function PurchaseService:HandleBikeAction(player, action, payload)
 		return self:BuyBike(player, payload.BikeId)
 	elseif action == "EquipBike" then
 		return self:EquipBike(player, payload.BikeId)
+	elseif action == "EquipAndSpawnBike" then
+		return self:EquipAndSpawnBike(player, payload.BikeId)
 	elseif action == "SpawnBike" then
 		local bikeId = payload.BikeId or profile.EquippedBikeId
 		return self:SpawnBike(player, bikeId)
-	elseif action == "DespawnBike" then
+	elseif action == "DespawnBike" or action == "StoreBike" then
 		self:DespawnBike(player)
-		return { Success = true, Message = "Bike stored." }
+		return { Success = true, Message = "Bike stored.", Snapshot = self.DataService:GetClientSnapshot(player) }
 	elseif action == "RespawnBike" then
 		local bikeId = payload.BikeId or profile.EquippedBikeId
 		return self:SpawnBike(player, bikeId)
@@ -1346,7 +1830,7 @@ return PurchaseService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="14">
+      <Item class="ModuleScript" referent="15">
         <Properties>
           <string name="Name">WantedService</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -1692,22 +2176,22 @@ return WantedService
       </Item>
     </Item>
   </Item>
-  <Item class="SoundService" referent="15">
+  <Item class="SoundService" referent="16">
     <Properties>
       <string name="Name">SoundService</string>
       <token name="AmbientReverb">17</token>
       <bool name="RespectFilteringEnabled">true</bool>
     </Properties>
   </Item>
-  <Item class="StarterGui" referent="16">
+  <Item class="StarterGui" referent="17">
     <Properties>
       <string name="Name">StarterGui</string>
     </Properties>
-    <Item class="Folder" referent="17">
+    <Item class="Folder" referent="18">
       <Properties>
         <string name="Name">UI</string>
       </Properties>
-      <Item class="LocalScript" referent="18">
+      <Item class="LocalScript" referent="19">
         <Properties>
           <string name="Name">BikeMenu</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -1723,6 +2207,13 @@ local bikeAction = remotesFolder:WaitForChild("BikeAction")
 local dataSync = remotesFolder:WaitForChild("DataSync")
 local notificationRemote = remotesFolder:WaitForChild("Notification")
 
+if playerGui:GetAttribute("StreetLegalGarageOpen") == nil then
+	playerGui:SetAttribute("StreetLegalGarageOpen", false)
+end
+if playerGui:GetAttribute("StreetLegalGarageFocusFree") == nil then
+	playerGui:SetAttribute("StreetLegalGarageFocusFree", false)
+end
+
 local state = {
 	Catalog = {},
 	Snapshot = {
@@ -1733,6 +2224,7 @@ local state = {
 	SelectedBikeId = nil,
 	Message = "",
 	Busy = false,
+	AutoOpenedCharacter = nil,
 }
 
 local existingGui = playerGui:FindFirstChild("StreetLegalGarage")
@@ -1747,47 +2239,49 @@ gui.IgnoreGuiInset = true
 gui.Enabled = false
 gui.Parent = playerGui
 
-local backdrop = Instance.new("Frame")
+local backdrop = Instance.new("TextButton")
 backdrop.Size = UDim2.fromScale(1, 1)
 backdrop.BackgroundColor3 = Color3.new(0, 0, 0)
-backdrop.BackgroundTransparency = 0.3
+backdrop.BackgroundTransparency = 0.28
+backdrop.BorderSizePixel = 0
+backdrop.Text = ""
+backdrop.AutoButtonColor = false
 backdrop.Parent = gui
 
 local panel = Instance.new("Frame")
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
 panel.Position = UDim2.fromScale(0.5, 0.5)
-panel.Size = UDim2.fromScale(0.78, 0.74)
+panel.Size = UDim2.fromScale(0.84, 0.8)
 panel.BackgroundColor3 = Config.UI.Panel
 panel.Parent = gui
-
 local panelCorner = Instance.new("UICorner")
-panelCorner.CornerRadius = UDim.new(0, 14)
+panelCorner.CornerRadius = UDim.new(0, 16)
 panelCorner.Parent = panel
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -24, 0, 46)
-title.Position = UDim2.fromOffset(12, 10)
+title.Size = UDim2.new(1, -180, 0, 42)
+title.Position = UDim2.fromOffset(18, 12)
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBlack
 title.TextSize = 28
 title.TextColor3 = Config.UI.Accent
 title.TextXAlignment = Enum.TextXAlignment.Left
-title.Text = "Street Legal Garage"
+title.Text = "Garage"
 title.Parent = panel
 
 local subtitle = Instance.new("TextLabel")
-subtitle.Size = UDim2.new(1, -24, 0, 22)
-subtitle.Position = UDim2.fromOffset(12, 52)
+subtitle.Size = UDim2.new(1, -260, 0, 20)
+subtitle.Position = UDim2.fromOffset(18, 50)
 subtitle.BackgroundTransparency = 1
 subtitle.Font = Enum.Font.Gotham
 subtitle.TextSize = 14
 subtitle.TextColor3 = Color3.fromRGB(190, 195, 201)
 subtitle.TextXAlignment = Enum.TextXAlignment.Left
-subtitle.Text = "Starter bikes are free. Progression bikes unlock with cash. Premium hook is optional."
+subtitle.Text = "Pick a free starter, click Equip & Spawn, and ride. Garage is always on the HUD now."
 subtitle.Parent = panel
 
 local cashLabel = Instance.new("TextLabel")
-cashLabel.Size = UDim2.new(0, 220, 0, 30)
+cashLabel.Size = UDim2.new(0, 180, 0, 28)
 cashLabel.Position = UDim2.new(1, -232, 0, 18)
 cashLabel.BackgroundTransparency = 1
 cashLabel.Font = Enum.Font.GothamBold
@@ -1797,55 +2291,110 @@ cashLabel.TextXAlignment = Enum.TextXAlignment.Right
 cashLabel.Text = "$0"
 cashLabel.Parent = panel
 
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.fromOffset(42, 42)
+closeButton.Position = UDim2.new(1, -54, 0, 14)
+closeButton.BackgroundColor3 = Color3.fromRGB(38, 43, 51)
+closeButton.Font = Enum.Font.GothamBlack
+closeButton.TextSize = 22
+closeButton.TextColor3 = Color3.fromRGB(245, 245, 245)
+closeButton.Text = "×"
+closeButton.Parent = panel
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(1, 0)
+closeCorner.Parent = closeButton
+
 local listFrame = Instance.new("ScrollingFrame")
-listFrame.Position = UDim2.fromOffset(14, 90)
-listFrame.Size = UDim2.new(0.42, -20, 1, -148)
+listFrame.Position = UDim2.fromOffset(18, 86)
+listFrame.Size = UDim2.new(0.38, -18, 1, -154)
 listFrame.BackgroundColor3 = Config.UI.Background
 listFrame.BorderSizePixel = 0
 listFrame.ScrollBarThickness = 6
 listFrame.CanvasSize = UDim2.fromOffset(0, 0)
 listFrame.Parent = panel
-
 local listCorner = Instance.new("UICorner")
 listCorner.CornerRadius = UDim.new(0, 12)
 listCorner.Parent = listFrame
+
+local listPadding = Instance.new("UIPadding")
+listPadding.PaddingTop = UDim.new(0, 10)
+listPadding.PaddingBottom = UDim.new(0, 10)
+listPadding.PaddingLeft = UDim.new(0, 10)
+listPadding.PaddingRight = UDim.new(0, 10)
+listPadding.Parent = listFrame
 
 local listLayout = Instance.new("UIListLayout")
 listLayout.Padding = UDim.new(0, 8)
 listLayout.Parent = listFrame
 
-local listPadding = Instance.new("UIPadding")
-listPadding.PaddingTop = UDim.new(0, 10)
-listPadding.PaddingLeft = UDim.new(0, 10)
-listPadding.PaddingRight = UDim.new(0, 10)
-listPadding.PaddingBottom = UDim.new(0, 10)
-listPadding.Parent = listFrame
-
 local detailFrame = Instance.new("Frame")
-detailFrame.Position = UDim2.new(0.45, 0, 0, 90)
-detailFrame.Size = UDim2.new(0.55, -16, 1, -148)
+detailFrame.Position = UDim2.new(0.4, 6, 0, 86)
+detailFrame.Size = UDim2.new(0.6, -24, 1, -154)
 detailFrame.BackgroundColor3 = Config.UI.Background
 detailFrame.BorderSizePixel = 0
 detailFrame.Parent = panel
-
 local detailCorner = Instance.new("UICorner")
 detailCorner.CornerRadius = UDim.new(0, 12)
 detailCorner.Parent = detailFrame
 
+local welcomeCard = Instance.new("Frame")
+welcomeCard.Size = UDim2.new(1, -24, 0, 110)
+welcomeCard.Position = UDim2.fromOffset(12, 12)
+welcomeCard.BackgroundColor3 = Color3.fromRGB(34, 40, 48)
+welcomeCard.Parent = detailFrame
+local welcomeCorner = Instance.new("UICorner")
+welcomeCorner.CornerRadius = UDim.new(0, 12)
+welcomeCorner.Parent = welcomeCard
+
+local welcomeTitle = Instance.new("TextLabel")
+welcomeTitle.Size = UDim2.new(1, -20, 0, 30)
+welcomeTitle.Position = UDim2.fromOffset(12, 10)
+welcomeTitle.BackgroundTransparency = 1
+welcomeTitle.Font = Enum.Font.GothamBlack
+welcomeTitle.TextSize = 22
+welcomeTitle.TextColor3 = Config.UI.Accent
+welcomeTitle.TextXAlignment = Enum.TextXAlignment.Left
+welcomeTitle.Text = "Start here"
+welcomeTitle.Parent = welcomeCard
+
+local welcomeBody = Instance.new("TextLabel")
+welcomeBody.Size = UDim2.new(1, -20, 1, -46)
+welcomeBody.Position = UDim2.fromOffset(12, 38)
+welcomeBody.BackgroundTransparency = 1
+welcomeBody.Font = Enum.Font.Gotham
+welcomeBody.TextSize = 15
+welcomeBody.TextWrapped = true
+welcomeBody.TextYAlignment = Enum.TextYAlignment.Top
+welcomeBody.TextXAlignment = Enum.TextXAlignment.Left
+welcomeBody.TextColor3 = Color3.fromRGB(220, 224, 229)
+welcomeBody.Text = "1. Pick any free starter bike from the list.\n2. Click Equip & Spawn.\n3. If you end up on foot with no bike out, hit the HUD Spawn Bike button."
+welcomeBody.Parent = welcomeCard
+
 local bikeName = Instance.new("TextLabel")
-bikeName.Size = UDim2.new(1, -20, 0, 40)
-bikeName.Position = UDim2.fromOffset(12, 12)
+bikeName.Size = UDim2.new(1, -24, 0, 34)
+bikeName.Position = UDim2.fromOffset(12, 136)
 bikeName.BackgroundTransparency = 1
 bikeName.Font = Enum.Font.GothamBlack
-bikeName.TextSize = 26
-bikeName.TextColor3 = Config.UI.Primary
+bikeName.TextSize = 28
+bikeName.TextColor3 = Color3.fromRGB(245, 245, 245)
 bikeName.TextXAlignment = Enum.TextXAlignment.Left
 bikeName.Text = "Select a bike"
 bikeName.Parent = detailFrame
 
+local badgeLabel = Instance.new("TextLabel")
+badgeLabel.Size = UDim2.new(1, -24, 0, 22)
+badgeLabel.Position = UDim2.fromOffset(12, 172)
+badgeLabel.BackgroundTransparency = 1
+badgeLabel.Font = Enum.Font.GothamBold
+badgeLabel.TextSize = 14
+badgeLabel.TextColor3 = Config.UI.Accent
+badgeLabel.TextXAlignment = Enum.TextXAlignment.Left
+badgeLabel.Text = ""
+badgeLabel.Parent = detailFrame
+
 local bikeDesc = Instance.new("TextLabel")
 bikeDesc.Size = UDim2.new(1, -24, 0, 70)
-bikeDesc.Position = UDim2.fromOffset(12, 54)
+bikeDesc.Position = UDim2.fromOffset(12, 198)
 bikeDesc.BackgroundTransparency = 1
 bikeDesc.Font = Enum.Font.Gotham
 bikeDesc.TextSize = 16
@@ -1857,11 +2406,11 @@ bikeDesc.Text = ""
 bikeDesc.Parent = detailFrame
 
 local statsLabel = Instance.new("TextLabel")
-statsLabel.Size = UDim2.new(1, -24, 0, 150)
-statsLabel.Position = UDim2.fromOffset(12, 132)
+statsLabel.Size = UDim2.new(1, -24, 0, 176)
+statsLabel.Position = UDim2.fromOffset(12, 274)
 statsLabel.BackgroundTransparency = 1
 statsLabel.Font = Enum.Font.Code
-statsLabel.TextSize = 18
+statsLabel.TextSize = 17
 statsLabel.TextWrapped = true
 statsLabel.TextColor3 = Color3.fromRGB(227, 228, 231)
 statsLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1870,44 +2419,67 @@ statsLabel.Text = ""
 statsLabel.Parent = detailFrame
 
 local buttonRow = Instance.new("Frame")
-buttonRow.Size = UDim2.new(1, -24, 0, 46)
-buttonRow.Position = UDim2.new(0, 12, 1, -92)
+buttonRow.Size = UDim2.new(1, -24, 0, 52)
+buttonRow.Position = UDim2.new(0, 12, 1, -102)
 buttonRow.BackgroundTransparency = 1
 buttonRow.Parent = detailFrame
 
-local messageLabel = Instance.new("TextLabel")
-messageLabel.Size = UDim2.new(1, -24, 0, 24)
-messageLabel.Position = UDim2.new(0, 12, 1, -38)
-messageLabel.BackgroundTransparency = 1
-messageLabel.Font = Enum.Font.GothamBold
-messageLabel.TextSize = 16
-messageLabel.TextColor3 = Config.UI.Accent
-messageLabel.TextXAlignment = Enum.TextXAlignment.Left
-messageLabel.Text = "[M] closes garage"
-messageLabel.Parent = detailFrame
-
-local function makeButton(text, widthScale, color)
+local function makeButton(name, text, color, positionScale, widthScale)
 	local button = Instance.new("TextButton")
+	button.Name = name
 	button.Size = UDim2.new(widthScale, -8, 1, 0)
+	button.Position = UDim2.new(positionScale, 0, 0, 0)
 	button.BackgroundColor3 = color
 	button.AutoButtonColor = true
 	button.Font = Enum.Font.GothamBold
 	button.TextSize = 18
 	button.TextColor3 = Color3.fromRGB(18, 18, 18)
 	button.Text = text
+	button.Parent = buttonRow
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 10)
 	corner.Parent = button
-	button.Parent = buttonRow
 	return button
 end
 
-local equipButton = makeButton("Equip", 0.32, Config.UI.Accent)
-local buyButton = makeButton("Buy", 0.32, Config.UI.Primary)
-local spawnButton = makeButton("Spawn", 0.32, Config.UI.Success)
-spawnButton.Position = UDim2.new(0.68, 0, 0, 0)
-buyButton.Position = UDim2.new(0.34, 0, 0, 0)
-equipButton.Position = UDim2.new(0, 0, 0, 0)
+local primaryButton = makeButton("PrimaryButton", "Equip & Spawn", Config.UI.Success, 0, 0.48)
+local secondaryButton = makeButton("SecondaryButton", "Equip Only", Config.UI.Accent, 0.5, 0.24)
+local storeButton = makeButton("StoreButton", "Store Bike", Color3.fromRGB(134, 157, 181), 0.76, 0.24)
+
+local messageLabel = Instance.new("TextLabel")
+messageLabel.Size = UDim2.new(1, -24, 0, 24)
+messageLabel.Position = UDim2.new(0, 12, 1, -40)
+messageLabel.BackgroundTransparency = 1
+messageLabel.Font = Enum.Font.GothamBold
+messageLabel.TextSize = 15
+messageLabel.TextColor3 = Config.UI.Accent
+messageLabel.TextXAlignment = Enum.TextXAlignment.Left
+messageLabel.Text = "Garage button is pinned on the HUD. M still toggles this menu."
+messageLabel.Parent = detailFrame
+
+local footerLabel = Instance.new("TextLabel")
+footerLabel.Size = UDim2.new(1, -24, 0, 22)
+footerLabel.Position = UDim2.new(0, 18, 1, -28)
+footerLabel.BackgroundTransparency = 1
+footerLabel.Font = Enum.Font.Gotham
+footerLabel.TextSize = 13
+footerLabel.TextColor3 = Color3.fromRGB(176, 182, 189)
+footerLabel.TextXAlignment = Enum.TextXAlignment.Left
+footerLabel.Text = ""
+footerLabel.Parent = panel
+
+local function setFooterText()
+	footerLabel.Text = "HUD buttons: Garage / Spawn Bike • M toggles garage • R respawns active bike • Q hops"
+end
+setFooterText()
+
+local function setGarageOpen(isOpen, focusFree)
+	if focusFree ~= nil then
+		playerGui:SetAttribute("StreetLegalGarageFocusFree", focusFree)
+	end
+	playerGui:SetAttribute("StreetLegalGarageOpen", isOpen)
+	gui.Enabled = isOpen
+end
 
 local function setMessage(text, color)
 	state.Message = text
@@ -1923,6 +2495,14 @@ local function setSnapshot(snapshot)
 	cashLabel.Text = string.format("$%d", snapshot.Cash or 0)
 end
 
+local function getActiveBikeId()
+	return player:GetAttribute("StreetLegalActiveBikeId")
+end
+
+local function ownsBike(bikeId)
+	return state.Snapshot.OwnedBikes and state.Snapshot.OwnedBikes[bikeId] == true or false
+end
+
 local function findBike(id)
 	for _, bike in ipairs(state.Catalog) do
 		if bike.Id == id then
@@ -1932,77 +2512,167 @@ local function findBike(id)
 	return nil
 end
 
+local function choosePreferredBike(focusFree)
+	if focusFree then
+		for _, bike in ipairs(state.Catalog) do
+			if bike.UnlockType == "Free" then
+				return bike.Id
+			end
+		end
+	end
+
+	local equipped = state.Snapshot.EquippedBikeId
+	if equipped and findBike(equipped) then
+		return equipped
+	end
+
+	return state.Catalog[1] and state.Catalog[1].Id or nil
+end
+
+local function meter(value)
+	local normalized = math.clamp(math.floor((value * 2.1) + 0.5), 1, 5)
+	return string.rep("■", normalized) .. string.rep("□", 5 - normalized)
+end
+
+local function updateButton(button, enabled, text, color)
+	button.Text = text
+	button.Active = enabled
+	button.AutoButtonColor = enabled
+	button.BackgroundColor3 = enabled and color or Color3.fromRGB(62, 68, 76)
+	button.TextTransparency = enabled and 0 or 0.25
+end
+
 local function updateDetails()
 	local bike = findBike(state.SelectedBikeId)
+	local activeBikeId = getActiveBikeId()
+	local noActiveBike = activeBikeId == nil
+	if noActiveBike then
+		welcomeTitle.Text = "Pick your first ride"
+		welcomeBody.Text = "Choose any free starter bike, then hit Equip & Spawn. If you wipe out or end up on foot with no bike active, the HUD keeps a giant Spawn Bike button on screen."
+	else
+		welcomeTitle.Text = "Garage is pinned"
+		welcomeBody.Text = "Your garage is always one click away from the HUD. Use it to swap bikes, respawn one in front of you, or store the current ride."
+	end
+
 	if not bike then
 		bikeName.Text = "Select a bike"
-		bikeDesc.Text = "Choose a bike from the left list."
+		badgeLabel.Text = ""
+		bikeDesc.Text = "Choose a bike from the list on the left."
 		statsLabel.Text = ""
+		updateButton(primaryButton, false, "Select a bike", Config.UI.Success)
+		updateButton(secondaryButton, false, "Equip Only", Config.UI.Accent)
+		updateButton(storeButton, activeBikeId ~= nil, activeBikeId and "Store Current Bike" or "No Bike Out", Color3.fromRGB(134, 157, 181))
 		return
 	end
 
+	local owned = ownsBike(bike.Id)
+	local equipped = state.Snapshot.EquippedBikeId == bike.Id
+	local active = activeBikeId == bike.Id
+	local unlockText = bike.UnlockType == "Cash" and ("$" .. tostring(bike.Price)) or (bike.UnlockType == "Gamepass" and "Game Pass" or "Free Starter")
+	local ownershipLabel = owned and (active and "ACTIVE" or (equipped and "EQUIPPED" or "OWNED")) or "LOCKED"
+
 	bikeName.Text = bike.DisplayName
-	bikeDesc.Text = bike.Description
-	local owned = state.Snapshot.OwnedBikes and state.Snapshot.OwnedBikes[bike.Id]
-	local costText = bike.UnlockType == "Cash" and ("$" .. tostring(bike.Price)) or (bike.UnlockType == "Gamepass" and "Game Pass" or "Free")
+	badgeLabel.Text = string.format("%s • Tier %d • %s", bike.StyleTag or "Electric dirt bike", bike.Tier or 1, ownershipLabel)
+	bikeDesc.Text = bike.Description or ""
 	statsLabel.Text = table.concat({
-		string.format("Ownership: %s", owned and "Owned" or "Locked"),
-		string.format("Unlock: %s", costText),
-		string.format("Top Speed: %d MPH", bike.TopSpeedMph),
-		string.format("Acceleration: %.2f", bike.Acceleration),
-		string.format("Handling: %.2f", bike.Handling),
-		string.format("Jump: %.2f", bike.Jump),
-		string.format("Durability: %.2f", bike.Durability),
-		string.format("Street Heat: %s", bike.IllegalOnStreet and "High" or "Low"),
+		string.format("Ownership    %s", ownershipLabel),
+		string.format("Unlock       %s", unlockText),
+		string.format("Top Speed    %d MPH", bike.TopSpeedMph or 0),
+		string.format("Acceleration %s", meter(bike.Acceleration or 1)),
+		string.format("Handling     %s", meter(bike.Handling or 1)),
+		string.format("Jump         %s", meter(bike.Jump or 1)),
+		string.format("Durability   %s", meter(bike.Durability or 1)),
+		string.format("Street Heat  %s", bike.IllegalOnStreet and "High" or "Low"),
 	}, "\n")
 
-	equipButton.Text = state.Snapshot.EquippedBikeId == bike.Id and "Equipped" or "Equip"
-	buyButton.Text = owned and "Owned" or (bike.UnlockType == "Cash" and ("Buy $" .. tostring(bike.Price)) or (bike.UnlockType == "Gamepass" and "Unlock" or "Free"))
-	spawnButton.Text = "Spawn"
+	if owned then
+		if active then
+			updateButton(primaryButton, true, "Respawn Selected", Config.UI.Success)
+		elseif equipped then
+			updateButton(primaryButton, true, "Spawn Selected", Config.UI.Success)
+		else
+			updateButton(primaryButton, true, "Equip & Spawn", Config.UI.Success)
+		end
+		updateButton(secondaryButton, not equipped, equipped and "Equipped" or "Equip Only", Config.UI.Accent)
+	else
+		if bike.UnlockType == "Free" then
+			updateButton(primaryButton, true, "Claim & Spawn", Config.UI.Success)
+		else
+			updateButton(primaryButton, true, bike.UnlockType == "Cash" and ("Buy $" .. tostring(bike.Price)) or "Unlock", Config.UI.Primary)
+		end
+		updateButton(secondaryButton, false, bike.UnlockType == "Free" and "Free Starter" or "Owned Required", Config.UI.Accent)
+	end
+
+	updateButton(storeButton, activeBikeId ~= nil, active and "Store Active Bike" or (activeBikeId and "Store Current Bike" or "No Bike Out"), Color3.fromRGB(134, 157, 181))
 end
 
 local function renderCatalog()
 	for _, child in ipairs(listFrame:GetChildren()) do
-		if child:IsA("TextButton") then
+		if child:IsA("TextButton") or child.Name == "CatalogHeader" then
 			child:Destroy()
 		end
 	end
 
+	local header = Instance.new("TextLabel")
+	header.Name = "CatalogHeader"
+	header.Size = UDim2.new(1, -4, 0, 40)
+	header.BackgroundTransparency = 1
+	header.Font = Enum.Font.GothamBold
+	header.TextSize = 15
+	header.TextColor3 = Config.UI.Accent
+	header.TextXAlignment = Enum.TextXAlignment.Left
+	header.Text = "Free starters are at the top. Pick one and hit Equip & Spawn."
+	header.LayoutOrder = -1
+	header.Parent = listFrame
+
 	for index, bike in ipairs(state.Catalog) do
-		local owned = state.Snapshot.OwnedBikes and state.Snapshot.OwnedBikes[bike.Id]
+		local owned = ownsBike(bike.Id)
+		local active = getActiveBikeId() == bike.Id
+		local unlockText = bike.UnlockType == "Cash" and ("$" .. tostring(bike.Price)) or (bike.UnlockType == "Gamepass" and "GAME PASS" or "FREE STARTER")
 		local row = Instance.new("TextButton")
 		row.Name = bike.Id
-		row.Size = UDim2.new(1, -4, 0, 62)
-		row.BackgroundColor3 = state.SelectedBikeId == bike.Id and Color3.fromRGB(52, 60, 74) or Color3.fromRGB(34, 39, 46)
+		row.Size = UDim2.new(1, -4, 0, 76)
+		row.BackgroundColor3 = state.SelectedBikeId == bike.Id and Color3.fromRGB(56, 66, 82) or Color3.fromRGB(34, 39, 46)
 		row.AutoButtonColor = true
 		row.Text = ""
 		row.LayoutOrder = index
 		row.Parent = listFrame
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 10)
-		corner.Parent = row
+		local rowCorner = Instance.new("UICorner")
+		rowCorner.CornerRadius = UDim.new(0, 10)
+		rowCorner.Parent = row
 
 		local nameLabel = Instance.new("TextLabel")
-		nameLabel.Size = UDim2.new(1, -16, 0, 24)
+		nameLabel.Size = UDim2.new(1, -18, 0, 24)
 		nameLabel.Position = UDim2.fromOffset(10, 8)
 		nameLabel.BackgroundTransparency = 1
 		nameLabel.Font = Enum.Font.GothamBold
 		nameLabel.TextSize = 18
-		nameLabel.TextColor3 = owned and Config.UI.Accent or Color3.fromRGB(223, 227, 231)
+		nameLabel.TextColor3 = owned and Color3.fromRGB(245, 245, 245) or Color3.fromRGB(220, 220, 220)
 		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 		nameLabel.Text = bike.DisplayName
 		nameLabel.Parent = row
 
-		local metaLabel = Instance.new("TextLabel")
-		metaLabel.Size = UDim2.new(1, -16, 0, 20)
-		metaLabel.Position = UDim2.fromOffset(10, 34)
-		metaLabel.BackgroundTransparency = 1
-		metaLabel.Font = Enum.Font.Gotham
-		metaLabel.TextSize = 14
-		metaLabel.TextColor3 = Color3.fromRGB(175, 181, 188)
-		metaLabel.TextXAlignment = Enum.TextXAlignment.Left
-		metaLabel.Text = string.format("%d MPH • %s", bike.TopSpeedMph, owned and "Owned" or bike.UnlockType)
-		metaLabel.Parent = row
+		local subLabel = Instance.new("TextLabel")
+		subLabel.Size = UDim2.new(1, -18, 0, 18)
+		subLabel.Position = UDim2.fromOffset(10, 34)
+		subLabel.BackgroundTransparency = 1
+		subLabel.Font = Enum.Font.Gotham
+		subLabel.TextSize = 13
+		subLabel.TextColor3 = Color3.fromRGB(182, 188, 195)
+		subLabel.TextXAlignment = Enum.TextXAlignment.Left
+		subLabel.Text = string.format("%s • %d MPH", bike.StyleTag or "Electric dirt bike", bike.TopSpeedMph or 0)
+		subLabel.Parent = row
+
+		local tagLabel = Instance.new("TextLabel")
+		tagLabel.Size = UDim2.new(1, -18, 0, 16)
+		tagLabel.Position = UDim2.fromOffset(10, 54)
+		tagLabel.BackgroundTransparency = 1
+		tagLabel.Font = Enum.Font.GothamBold
+		tagLabel.TextSize = 12
+		tagLabel.TextXAlignment = Enum.TextXAlignment.Left
+		tagLabel.TextColor3 = active and Config.UI.Success or (owned and Config.UI.Accent or Color3.fromRGB(162, 166, 172))
+		tagLabel.Text = active and "BIKE ACTIVE" or (owned and (bike.UnlockType == "Free" and "FREE • OWNED" or "OWNED") or unlockText)
+		tagLabel.Parent = row
 
 		row.MouseButton1Click:Connect(function()
 			state.SelectedBikeId = bike.Id
@@ -2016,7 +2686,7 @@ local function renderCatalog()
 	end)
 end
 
-local function refreshGarage()
+local function refreshGarage(forceSelection)
 	if state.Busy then
 		return
 	end
@@ -2033,12 +2703,16 @@ local function refreshGarage()
 
 	state.Catalog = response.Catalog or {}
 	setSnapshot(response.Snapshot or state.Snapshot)
-	if not state.SelectedBikeId then
-		state.SelectedBikeId = state.Snapshot.EquippedBikeId or (state.Catalog[1] and state.Catalog[1].Id)
+	player:SetAttribute("StreetLegalActiveBikeId", response.ActiveBikeId)
+
+	local shouldFocusFree = playerGui:GetAttribute("StreetLegalGarageFocusFree") == true
+	if forceSelection or not state.SelectedBikeId or shouldFocusFree or not findBike(state.SelectedBikeId) then
+		state.SelectedBikeId = choosePreferredBike(shouldFocusFree)
+		if shouldFocusFree then
+			playerGui:SetAttribute("StreetLegalGarageFocusFree", false)
+		end
 	end
-	if not findBike(state.SelectedBikeId) and state.Catalog[1] then
-		state.SelectedBikeId = state.Catalog[1].Id
-	end
+
 	renderCatalog()
 	updateDetails()
 end
@@ -2063,24 +2737,73 @@ local function invokeAction(action)
 	end
 
 	setMessage(response.Message or "Done.", response.Success and Config.UI.Success or Config.UI.Danger)
-	refreshGarage()
+	refreshGarage(false)
+
+	if response.Success and (action == "SpawnBike" or action == "RespawnBike" or action == "EquipAndSpawnBike") then
+		setGarageOpen(false)
+	end
 end
 
-equipButton.MouseButton1Click:Connect(function()
-	invokeAction("EquipBike")
-end)
-
-buyButton.MouseButton1Click:Connect(function()
+local function handlePrimaryAction()
 	local bike = findBike(state.SelectedBikeId)
-	if bike and bike.UnlockType == "Free" then
-		setMessage("This bike is already free.", Config.UI.Accent)
+	if not bike then
 		return
 	end
-	invokeAction("BuyBike")
+
+	local owned = ownsBike(bike.Id)
+	local equipped = state.Snapshot.EquippedBikeId == bike.Id
+	local active = getActiveBikeId() == bike.Id
+
+	if owned then
+		if active then
+			invokeAction("RespawnBike")
+		elseif equipped then
+			invokeAction("SpawnBike")
+		else
+			invokeAction("EquipAndSpawnBike")
+		end
+		return
+	end
+
+	if bike.UnlockType == "Free" then
+		invokeAction("EquipAndSpawnBike")
+	else
+		invokeAction("BuyBike")
+	end
+end
+
+local function handleSecondaryAction()
+	local bike = findBike(state.SelectedBikeId)
+	if not bike or not ownsBike(bike.Id) then
+		return
+	end
+	if state.Snapshot.EquippedBikeId == bike.Id then
+		setMessage(string.format("%s is already equipped.", bike.DisplayName), Config.UI.Accent)
+		return
+	end
+	invokeAction("EquipBike")
+end
+
+local function openGarage(focusFree, message)
+	setGarageOpen(true, focusFree)
+	refreshGarage(true)
+	setMessage(message or "Pick a bike and hit Equip & Spawn.", Config.UI.Accent)
+end
+
+backdrop.MouseButton1Click:Connect(function()
+	setGarageOpen(false)
 end)
 
-spawnButton.MouseButton1Click:Connect(function()
-	invokeAction("SpawnBike")
+closeButton.MouseButton1Click:Connect(function()
+	setGarageOpen(false)
+end)
+
+primaryButton.MouseButton1Click:Connect(handlePrimaryAction)
+secondaryButton.MouseButton1Click:Connect(handleSecondaryAction)
+storeButton.MouseButton1Click:Connect(function()
+	if getActiveBikeId() then
+		invokeAction("StoreBike")
+	end
 end)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -2089,18 +2812,35 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	end
 
 	if input.KeyCode == Enum.KeyCode.M then
-		gui.Enabled = not gui.Enabled
 		if gui.Enabled then
-			refreshGarage()
-			setMessage("M closes garage", Config.UI.Accent)
+			setGarageOpen(false)
+		else
+			openGarage(false, "Garage opened. Pick a bike, then click Spawn.")
 		end
+	end
+end)
+
+playerGui:GetAttributeChangedSignal("StreetLegalGarageOpen"):Connect(function()
+	local shouldOpen = playerGui:GetAttribute("StreetLegalGarageOpen") == true
+	gui.Enabled = shouldOpen
+	if shouldOpen then
+		refreshGarage(false)
+	end
+end)
+
+player:GetAttributeChangedSignal("StreetLegalActiveBikeId"):Connect(function()
+	if gui.Enabled then
+		renderCatalog()
+		updateDetails()
 	end
 end)
 
 dataSync.OnClientEvent:Connect(function(snapshot)
 	setSnapshot(snapshot)
-	updateDetails()
-	renderCatalog()
+	if gui.Enabled then
+		updateDetails()
+		renderCatalog()
+	end
 end)
 
 notificationRemote.OnClientEvent:Connect(function(payload)
@@ -2109,11 +2849,34 @@ notificationRemote.OnClientEvent:Connect(function(payload)
 	end
 end)
 
-refreshGarage()
+local function scheduleFirstSpawnOpen(character)
+	if not character or state.AutoOpenedCharacter == character then
+		return
+	end
+	state.AutoOpenedCharacter = character
+	playerGui:SetAttribute("StreetLegalGarageFocusFree", true)
+	task.delay(0.9, function()
+		if player.Character ~= character then
+			return
+		end
+		if player:GetAttribute("StreetLegalActiveBikeId") then
+			return
+		end
+		openGarage(true, "Choose a free starter bike and hit Equip & Spawn.")
+	end)
+end
+
+player.CharacterAdded:Connect(scheduleFirstSpawnOpen)
+if player.Character then
+	scheduleFirstSpawnOpen(player.Character)
+end
+
+refreshGarage(true)
+setMessage("Garage button is pinned on the HUD. Pick a bike and ride.", Config.UI.Accent)
 ]]></string>
         </Properties>
       </Item>
-      <Item class="LocalScript" referent="19">
+      <Item class="LocalScript" referent="20">
         <Properties>
           <string name="Name">HUD</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -2132,6 +2895,13 @@ local notificationRemote = remotesFolder:WaitForChild("Notification")
 local dataSyncRemote = remotesFolder:WaitForChild("DataSync")
 local bikeAction = remotesFolder:WaitForChild("BikeAction")
 
+if playerGui:GetAttribute("StreetLegalGarageOpen") == nil then
+	playerGui:SetAttribute("StreetLegalGarageOpen", false)
+end
+if playerGui:GetAttribute("StreetLegalGarageFocusFree") == nil then
+	playerGui:SetAttribute("StreetLegalGarageFocusFree", false)
+end
+
 local existingGui = playerGui:FindFirstChild("StreetLegalHUD")
 if existingGui then
 	existingGui:Destroy()
@@ -2149,8 +2919,8 @@ root.BackgroundTransparency = 1
 root.Parent = gui
 
 local speedFrame = Instance.new("Frame")
-speedFrame.Position = UDim2.new(0, 18, 1, -130)
-speedFrame.Size = UDim2.fromOffset(240, 104)
+speedFrame.Position = UDim2.new(0, 18, 1, -140)
+speedFrame.Size = UDim2.fromOffset(260, 114)
 speedFrame.BackgroundColor3 = Config.UI.Background
 speedFrame.BackgroundTransparency = 0.08
 speedFrame.Parent = root
@@ -2191,9 +2961,20 @@ gearLabel.TextXAlignment = Enum.TextXAlignment.Left
 gearLabel.Text = "Neutral"
 gearLabel.Parent = speedFrame
 
+local bikeStatusLabel = Instance.new("TextLabel")
+bikeStatusLabel.Size = UDim2.new(1, -18, 0, 16)
+bikeStatusLabel.Position = UDim2.fromOffset(12, 94)
+bikeStatusLabel.BackgroundTransparency = 1
+bikeStatusLabel.Font = Enum.Font.GothamBold
+bikeStatusLabel.TextSize = 13
+bikeStatusLabel.TextColor3 = Config.UI.Success
+bikeStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+bikeStatusLabel.Text = ""
+bikeStatusLabel.Parent = speedFrame
+
 local heatFrame = Instance.new("Frame")
 heatFrame.Position = UDim2.new(0, 18, 0, 18)
-heatFrame.Size = UDim2.fromOffset(280, 90)
+heatFrame.Size = UDim2.fromOffset(320, 96)
 heatFrame.BackgroundColor3 = Config.UI.Background
 heatFrame.BackgroundTransparency = 0.08
 heatFrame.Parent = root
@@ -2230,14 +3011,14 @@ heatCorner2.CornerRadius = UDim.new(1, 0)
 heatCorner2.Parent = heatBar
 
 local promptLabel = Instance.new("TextLabel")
-promptLabel.Size = UDim2.new(1, -24, 0, 18)
-promptLabel.Position = UDim2.fromOffset(12, 66)
+promptLabel.Size = UDim2.new(1, -24, 0, 22)
+promptLabel.Position = UDim2.fromOffset(12, 68)
 promptLabel.BackgroundTransparency = 1
 promptLabel.Font = Enum.Font.Gotham
 promptLabel.TextSize = 13
 promptLabel.TextColor3 = Color3.fromRGB(190, 195, 202)
 promptLabel.TextXAlignment = Enum.TextXAlignment.Left
-promptLabel.Text = "M Garage • R Respawn • Q Hop • Break line of sight to cool heat"
+promptLabel.Text = "Garage on HUD • R respawn bike • Q hop • Break line of sight to cool heat"
 promptLabel.Parent = heatFrame
 
 local comboLabel = Instance.new("TextLabel")
@@ -2254,7 +3035,7 @@ comboLabel.Parent = root
 local toastLabel = Instance.new("TextLabel")
 toastLabel.AnchorPoint = Vector2.new(0.5, 0)
 toastLabel.Position = UDim2.fromScale(0.5, 0.18)
-toastLabel.Size = UDim2.fromOffset(420, 28)
+toastLabel.Size = UDim2.fromOffset(480, 28)
 toastLabel.BackgroundTransparency = 1
 toastLabel.Font = Enum.Font.GothamBold
 toastLabel.TextSize = 18
@@ -2319,8 +3100,8 @@ playerDotCorner.CornerRadius = UDim.new(1, 0)
 playerDotCorner.Parent = playerDot
 
 local districtLabel = Instance.new("TextLabel")
-districtLabel.Position = UDim2.new(1, -240, 0, 160)
-districtLabel.Size = UDim2.fromOffset(220, 24)
+districtLabel.Position = UDim2.new(1, -260, 0, 160)
+districtLabel.Size = UDim2.fromOffset(240, 24)
 districtLabel.BackgroundTransparency = 1
 districtLabel.Font = Enum.Font.GothamBold
 districtLabel.TextSize = 16
@@ -2328,6 +3109,65 @@ districtLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
 districtLabel.TextXAlignment = Enum.TextXAlignment.Right
 districtLabel.Text = "District: Unknown"
 districtLabel.Parent = root
+
+local garageButton = Instance.new("TextButton")
+garageButton.AnchorPoint = Vector2.new(1, 1)
+garageButton.Position = UDim2.new(1, -18, 1, -18)
+garageButton.Size = UDim2.fromOffset(196, 52)
+garageButton.BackgroundColor3 = Config.UI.Accent
+garageButton.Font = Enum.Font.GothamBlack
+garageButton.TextSize = 20
+garageButton.TextColor3 = Color3.fromRGB(18, 18, 18)
+garageButton.Text = "GARAGE"
+garageButton.Parent = root
+local garageCorner = Instance.new("UICorner")
+garageCorner.CornerRadius = UDim.new(0, 12)
+garageCorner.Parent = garageButton
+
+local noBikeCallout = Instance.new("Frame")
+noBikeCallout.AnchorPoint = Vector2.new(0.5, 0)
+noBikeCallout.Position = UDim2.fromScale(0.5, 0.25)
+noBikeCallout.Size = UDim2.fromOffset(420, 120)
+noBikeCallout.BackgroundColor3 = Color3.fromRGB(30, 35, 42)
+noBikeCallout.BackgroundTransparency = 0.04
+noBikeCallout.Parent = root
+local noBikeCorner = Instance.new("UICorner")
+noBikeCorner.CornerRadius = UDim.new(0, 16)
+noBikeCorner.Parent = noBikeCallout
+
+local noBikeTitle = Instance.new("TextLabel")
+noBikeTitle.Size = UDim2.new(1, -24, 0, 28)
+noBikeTitle.Position = UDim2.fromOffset(12, 12)
+noBikeTitle.BackgroundTransparency = 1
+noBikeTitle.Font = Enum.Font.GothamBlack
+noBikeTitle.TextSize = 24
+noBikeTitle.TextColor3 = Config.UI.Accent
+noBikeTitle.Text = "SELECT A BIKE TO RIDE"
+noBikeTitle.Parent = noBikeCallout
+
+local noBikeBody = Instance.new("TextLabel")
+noBikeBody.Size = UDim2.new(1, -24, 0, 38)
+noBikeBody.Position = UDim2.fromOffset(12, 42)
+noBikeBody.BackgroundTransparency = 1
+noBikeBody.Font = Enum.Font.Gotham
+noBikeBody.TextSize = 16
+noBikeBody.TextWrapped = true
+noBikeBody.TextColor3 = Color3.fromRGB(230, 233, 236)
+noBikeBody.Text = "You are on foot with no active bike. Open the garage, pick a free starter, and click Equip & Spawn."
+noBikeBody.Parent = noBikeCallout
+
+local noBikeButton = Instance.new("TextButton")
+noBikeButton.Size = UDim2.fromOffset(170, 34)
+noBikeButton.Position = UDim2.new(0.5, -85, 1, -46)
+noBikeButton.BackgroundColor3 = Config.UI.Success
+noBikeButton.Font = Enum.Font.GothamBlack
+noBikeButton.TextSize = 18
+noBikeButton.TextColor3 = Color3.fromRGB(18, 18, 18)
+noBikeButton.Text = "SPAWN BIKE"
+noBikeButton.Parent = noBikeCallout
+local noBikeButtonCorner = Instance.new("UICorner")
+noBikeButtonCorner.CornerRadius = UDim.new(0, 10)
+noBikeButtonCorner.Parent = noBikeButton
 
 local localState = {
 	Heat = 0,
@@ -2349,6 +3189,15 @@ local function getCurrentRootPart()
 		return nil
 	end
 	return character:FindFirstChild("HumanoidRootPart")
+end
+
+local function noActiveBike()
+	return player:GetAttribute("StreetLegalActiveBikeId") == nil
+end
+
+local function openGarage(focusFree)
+	playerGui:SetAttribute("StreetLegalGarageFocusFree", focusFree)
+	playerGui:SetAttribute("StreetLegalGarageOpen", true)
 end
 
 local function refreshSpeed()
@@ -2382,18 +3231,58 @@ local function refreshMinimap()
 	playerDot.Position = UDim2.new(xAlpha, -4, zAlpha, -4)
 end
 
+local function refreshBikePrompts()
+	if noActiveBike() then
+		bikeStatusLabel.Text = "NO BIKE ACTIVE"
+		bikeStatusLabel.TextColor3 = Config.UI.Danger
+		promptLabel.Text = "No bike active • Click Spawn Bike or press M • Free starters are ready in the garage"
+		garageButton.Text = "SPAWN BIKE"
+		garageButton.BackgroundColor3 = Config.UI.Success
+		noBikeCallout.Visible = true
+	else
+		bikeStatusLabel.Text = "ACTIVE BIKE READY"
+		bikeStatusLabel.TextColor3 = Config.UI.Success
+		promptLabel.Text = "Garage on HUD • R respawn bike • Q hop • Break line of sight to cool heat"
+		garageButton.Text = "GARAGE"
+		garageButton.BackgroundColor3 = Config.UI.Accent
+		noBikeCallout.Visible = false
+	end
+end
+
+local function requestRespawn()
+	if noActiveBike() then
+		openGarage(true)
+		setToast("No bike out. Pick one in the garage first.", Config.UI.Accent)
+		return
+	end
+
+	local ok, response = pcall(function()
+		return bikeAction:InvokeServer("RespawnBike", { BikeId = localState.EquippedBikeId })
+	end)
+	if ok and response then
+		setToast(response.Message or "Bike respawned.", response.Success and Config.UI.Success or Config.UI.Danger)
+	end
+end
+
+local function handleGarageButton()
+	openGarage(noActiveBike())
+	if noActiveBike() then
+		setToast("Pick a free starter and hit Equip & Spawn.", Config.UI.Accent)
+	else
+		setToast("Garage opened.", Config.UI.Accent)
+	end
+end
+
+garageButton.MouseButton1Click:Connect(handleGarageButton)
+noBikeButton.MouseButton1Click:Connect(handleGarageButton)
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then
 		return
 	end
 
 	if input.KeyCode == Enum.KeyCode.R then
-		local ok, response = pcall(function()
-			return bikeAction:InvokeServer("RespawnBike", { BikeId = localState.EquippedBikeId })
-		end)
-		if ok and response then
-			setToast(response.Message or "Bike respawned.", response.Success and Config.UI.Success or Config.UI.Danger)
-		end
+		requestRespawn()
 	end
 end)
 
@@ -2427,14 +3316,19 @@ dataSyncRemote.OnClientEvent:Connect(function(snapshot)
 		return
 	end
 	localState.EquippedBikeId = snapshot.EquippedBikeId
+	refreshBikePrompts()
 end)
 
-for _, attributeName in ipairs({ "StreetLegalSpeedMph", "StreetLegalGear", "StreetLegalBikeName", "StreetLegalComboText", "StreetLegalDistrict" }) do
-	player:GetAttributeChangedSignal(attributeName):Connect(refreshSpeed)
+for _, attributeName in ipairs({ "StreetLegalSpeedMph", "StreetLegalGear", "StreetLegalBikeName", "StreetLegalComboText", "StreetLegalDistrict", "StreetLegalActiveBikeId" }) do
+	player:GetAttributeChangedSignal(attributeName):Connect(function()
+		refreshSpeed()
+		refreshBikePrompts()
+	end)
 end
 
 refreshSpeed()
 refreshHeat()
+refreshBikePrompts()
 
 RunService.RenderStepped:Connect(function()
 	refreshMinimap()
@@ -2442,21 +3336,22 @@ RunService.RenderStepped:Connect(function()
 		toastLabel.Text = ""
 	end
 	refreshSpeed()
+	refreshBikePrompts()
 end)
 ]]></string>
         </Properties>
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="20">
+  <Item class="StarterPlayer" referent="21">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="21">
+    <Item class="StarterPlayerScripts" referent="22">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="LocalScript" referent="22">
+      <Item class="LocalScript" referent="23">
         <Properties>
           <string name="Name">BikeController</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -2753,7 +3648,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="23">
+  <Item class="Workspace" referent="24">
     <Properties>
       <string name="Name">Workspace</string>
       <bool name="FilteringEnabled">true</bool>
@@ -2761,11 +3656,11 @@ end)
       <bool name="NeedsPivotMigration">false</bool>
       <bool name="StreamingEnabled">true</bool>
     </Properties>
-    <Item class="Folder" referent="24">
+    <Item class="Folder" referent="25">
       <Properties>
         <string name="Name">Map</string>
       </Properties>
-      <Item class="Script" referent="25">
+      <Item class="Script" referent="26">
         <Properties>
           <string name="Name">CityBuilder</string>
           <token name="RunContext">0</token>
@@ -3141,11 +4036,11 @@ Workspace:SetAttribute("StreetLegalWorldReady", true)
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="26">
+    <Item class="Folder" referent="27">
       <Properties>
         <string name="Name">Police</string>
       </Properties>
-      <Item class="Script" referent="27">
+      <Item class="Script" referent="28">
         <Properties>
           <string name="Name">NPCController</string>
           <token name="RunContext">0</token>
@@ -3164,11 +4059,11 @@ PoliceService:Init(script.Parent)
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="28">
+    <Item class="Folder" referent="29">
       <Properties>
         <string name="Name">Ramps</string>
       </Properties>
-      <Item class="ModuleScript" referent="29">
+      <Item class="ModuleScript" referent="30">
         <Properties>
           <string name="Name">ObstacleCatalog</string>
           <string name="Source"><![CDATA[return {
@@ -3187,11 +4082,11 @@ PoliceService:Init(script.Parent)
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="30">
+    <Item class="Folder" referent="31">
       <Properties>
         <string name="Name">Spawns</string>
       </Properties>
-      <Item class="ModuleScript" referent="31">
+      <Item class="ModuleScript" referent="32">
         <Properties>
           <string name="Name">SpawnData</string>
           <string name="Source"><![CDATA[return {

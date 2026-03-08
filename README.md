@@ -5,10 +5,11 @@ Street Legal is an original Roblox open-world dirt bike stunt MVP built for a Ro
 ## Core Features
 
 - Baltimore-inspired open world with distinct districts, shoreline, industrial blocks, alleys, parks, and off-road trails
-- Spawnable dirt bikes with free starters and paid progression bikes
+- Electric dirt bike roster with free starter bikes and higher-tier progression bikes
+- First-spawn garage onboarding with obvious free-bike selection and one-click Equip & Spawn flow
+- Persistent HUD Garage / Spawn Bike button so players are never stranded on foot wondering what to do
 - Server-authoritative ownership, currency, and wanted state
 - Police patrol + pursuit AI using `PathfindingService`
-- Functional garage/shop UI and HUD
 - Runtime world generation using primitives so the MVP works immediately in Studio
 
 ## Project Structure
@@ -62,9 +63,11 @@ Open `build/StreetLegal.rbxlx` in Roblox Studio.
 ## Testing Notes
 
 - The world is generated at runtime by `Workspace/Map/CityBuilder.server.lua`.
-- Garage/shop UI opens with `M`.
-- Spawn/equip bikes from the garage.
-- HUD shows speed, heat, district, combo, and prompts.
+- On first spawn, the garage auto-opens and focuses the free starter bikes.
+- Use the pinned HUD `Spawn Bike` / `Garage` button any time; `M` still toggles the garage if you want a keyboard shortcut.
+- If you are on foot with no active bike, the HUD and center callout will explicitly tell you to spawn one.
+- Garage flow is now built around obvious `Equip & Spawn`, `Spawn Selected`, `Respawn Selected`, and `Store Bike` actions.
+- HUD shows speed, heat, district, combo, and the no-bike prompt state.
 - Police will patrol automatically after the world is ready.
 - In Studio, DataStore calls can fail if the place is unpublished or API services are disabled; the game falls back to session-only defaults.
 
@@ -73,6 +76,7 @@ Open `build/StreetLegal.rbxlx` in Roblox Studio.
 Main tuning files:
 - `src/ReplicatedStorage/Modules/Config.lua`
 - `src/ReplicatedStorage/Modules/BikeDefinitions.lua`
+- `src/ReplicatedStorage/Modules/BikeVisuals.lua`
 - `src/ReplicatedStorage/Modules/WantedConfig.lua`
 
 Bike feel defaults live in `Config.lua` under `Bike` and `ArcadeController`.

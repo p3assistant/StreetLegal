@@ -14,6 +14,13 @@ local notificationRemote = remotesFolder:WaitForChild("Notification")
 local dataSyncRemote = remotesFolder:WaitForChild("DataSync")
 local bikeAction = remotesFolder:WaitForChild("BikeAction")
 
+if playerGui:GetAttribute("StreetLegalGarageOpen") == nil then
+	playerGui:SetAttribute("StreetLegalGarageOpen", false)
+end
+if playerGui:GetAttribute("StreetLegalGarageFocusFree") == nil then
+	playerGui:SetAttribute("StreetLegalGarageFocusFree", false)
+end
+
 local existingGui = playerGui:FindFirstChild("StreetLegalHUD")
 if existingGui then
 	existingGui:Destroy()
@@ -31,8 +38,8 @@ root.BackgroundTransparency = 1
 root.Parent = gui
 
 local speedFrame = Instance.new("Frame")
-speedFrame.Position = UDim2.new(0, 18, 1, -130)
-speedFrame.Size = UDim2.fromOffset(240, 104)
+speedFrame.Position = UDim2.new(0, 18, 1, -140)
+speedFrame.Size = UDim2.fromOffset(260, 114)
 speedFrame.BackgroundColor3 = Config.UI.Background
 speedFrame.BackgroundTransparency = 0.08
 speedFrame.Parent = root
@@ -73,9 +80,20 @@ gearLabel.TextXAlignment = Enum.TextXAlignment.Left
 gearLabel.Text = "Neutral"
 gearLabel.Parent = speedFrame
 
+local bikeStatusLabel = Instance.new("TextLabel")
+bikeStatusLabel.Size = UDim2.new(1, -18, 0, 16)
+bikeStatusLabel.Position = UDim2.fromOffset(12, 94)
+bikeStatusLabel.BackgroundTransparency = 1
+bikeStatusLabel.Font = Enum.Font.GothamBold
+bikeStatusLabel.TextSize = 13
+bikeStatusLabel.TextColor3 = Config.UI.Success
+bikeStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+bikeStatusLabel.Text = ""
+bikeStatusLabel.Parent = speedFrame
+
 local heatFrame = Instance.new("Frame")
 heatFrame.Position = UDim2.new(0, 18, 0, 18)
-heatFrame.Size = UDim2.fromOffset(280, 90)
+heatFrame.Size = UDim2.fromOffset(320, 96)
 heatFrame.BackgroundColor3 = Config.UI.Background
 heatFrame.BackgroundTransparency = 0.08
 heatFrame.Parent = root
@@ -112,14 +130,14 @@ heatCorner2.CornerRadius = UDim.new(1, 0)
 heatCorner2.Parent = heatBar
 
 local promptLabel = Instance.new("TextLabel")
-promptLabel.Size = UDim2.new(1, -24, 0, 18)
-promptLabel.Position = UDim2.fromOffset(12, 66)
+promptLabel.Size = UDim2.new(1, -24, 0, 22)
+promptLabel.Position = UDim2.fromOffset(12, 68)
 promptLabel.BackgroundTransparency = 1
 promptLabel.Font = Enum.Font.Gotham
 promptLabel.TextSize = 13
 promptLabel.TextColor3 = Color3.fromRGB(190, 195, 202)
 promptLabel.TextXAlignment = Enum.TextXAlignment.Left
-promptLabel.Text = "M Garage • R Respawn • Q Hop • Break line of sight to cool heat"
+promptLabel.Text = "Garage on HUD • R respawn bike • Q hop • Break line of sight to cool heat"
 promptLabel.Parent = heatFrame
 
 local comboLabel = Instance.new("TextLabel")
@@ -136,7 +154,7 @@ comboLabel.Parent = root
 local toastLabel = Instance.new("TextLabel")
 toastLabel.AnchorPoint = Vector2.new(0.5, 0)
 toastLabel.Position = UDim2.fromScale(0.5, 0.18)
-toastLabel.Size = UDim2.fromOffset(420, 28)
+toastLabel.Size = UDim2.fromOffset(480, 28)
 toastLabel.BackgroundTransparency = 1
 toastLabel.Font = Enum.Font.GothamBold
 toastLabel.TextSize = 18
@@ -201,8 +219,8 @@ playerDotCorner.CornerRadius = UDim.new(1, 0)
 playerDotCorner.Parent = playerDot
 
 local districtLabel = Instance.new("TextLabel")
-districtLabel.Position = UDim2.new(1, -240, 0, 160)
-districtLabel.Size = UDim2.fromOffset(220, 24)
+districtLabel.Position = UDim2.new(1, -260, 0, 160)
+districtLabel.Size = UDim2.fromOffset(240, 24)
 districtLabel.BackgroundTransparency = 1
 districtLabel.Font = Enum.Font.GothamBold
 districtLabel.TextSize = 16
@@ -210,6 +228,65 @@ districtLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
 districtLabel.TextXAlignment = Enum.TextXAlignment.Right
 districtLabel.Text = "District: Unknown"
 districtLabel.Parent = root
+
+local garageButton = Instance.new("TextButton")
+garageButton.AnchorPoint = Vector2.new(1, 1)
+garageButton.Position = UDim2.new(1, -18, 1, -18)
+garageButton.Size = UDim2.fromOffset(196, 52)
+garageButton.BackgroundColor3 = Config.UI.Accent
+garageButton.Font = Enum.Font.GothamBlack
+garageButton.TextSize = 20
+garageButton.TextColor3 = Color3.fromRGB(18, 18, 18)
+garageButton.Text = "GARAGE"
+garageButton.Parent = root
+local garageCorner = Instance.new("UICorner")
+garageCorner.CornerRadius = UDim.new(0, 12)
+garageCorner.Parent = garageButton
+
+local noBikeCallout = Instance.new("Frame")
+noBikeCallout.AnchorPoint = Vector2.new(0.5, 0)
+noBikeCallout.Position = UDim2.fromScale(0.5, 0.25)
+noBikeCallout.Size = UDim2.fromOffset(420, 120)
+noBikeCallout.BackgroundColor3 = Color3.fromRGB(30, 35, 42)
+noBikeCallout.BackgroundTransparency = 0.04
+noBikeCallout.Parent = root
+local noBikeCorner = Instance.new("UICorner")
+noBikeCorner.CornerRadius = UDim.new(0, 16)
+noBikeCorner.Parent = noBikeCallout
+
+local noBikeTitle = Instance.new("TextLabel")
+noBikeTitle.Size = UDim2.new(1, -24, 0, 28)
+noBikeTitle.Position = UDim2.fromOffset(12, 12)
+noBikeTitle.BackgroundTransparency = 1
+noBikeTitle.Font = Enum.Font.GothamBlack
+noBikeTitle.TextSize = 24
+noBikeTitle.TextColor3 = Config.UI.Accent
+noBikeTitle.Text = "SELECT A BIKE TO RIDE"
+noBikeTitle.Parent = noBikeCallout
+
+local noBikeBody = Instance.new("TextLabel")
+noBikeBody.Size = UDim2.new(1, -24, 0, 38)
+noBikeBody.Position = UDim2.fromOffset(12, 42)
+noBikeBody.BackgroundTransparency = 1
+noBikeBody.Font = Enum.Font.Gotham
+noBikeBody.TextSize = 16
+noBikeBody.TextWrapped = true
+noBikeBody.TextColor3 = Color3.fromRGB(230, 233, 236)
+noBikeBody.Text = "You are on foot with no active bike. Open the garage, pick a free starter, and click Equip & Spawn."
+noBikeBody.Parent = noBikeCallout
+
+local noBikeButton = Instance.new("TextButton")
+noBikeButton.Size = UDim2.fromOffset(170, 34)
+noBikeButton.Position = UDim2.new(0.5, -85, 1, -46)
+noBikeButton.BackgroundColor3 = Config.UI.Success
+noBikeButton.Font = Enum.Font.GothamBlack
+noBikeButton.TextSize = 18
+noBikeButton.TextColor3 = Color3.fromRGB(18, 18, 18)
+noBikeButton.Text = "SPAWN BIKE"
+noBikeButton.Parent = noBikeCallout
+local noBikeButtonCorner = Instance.new("UICorner")
+noBikeButtonCorner.CornerRadius = UDim.new(0, 10)
+noBikeButtonCorner.Parent = noBikeButton
 
 local localState = {
 	Heat = 0,
@@ -231,6 +308,15 @@ local function getCurrentRootPart()
 		return nil
 	end
 	return character:FindFirstChild("HumanoidRootPart")
+end
+
+local function noActiveBike()
+	return player:GetAttribute("StreetLegalActiveBikeId") == nil
+end
+
+local function openGarage(focusFree)
+	playerGui:SetAttribute("StreetLegalGarageFocusFree", focusFree)
+	playerGui:SetAttribute("StreetLegalGarageOpen", true)
 end
 
 local function refreshSpeed()
@@ -264,18 +350,58 @@ local function refreshMinimap()
 	playerDot.Position = UDim2.new(xAlpha, -4, zAlpha, -4)
 end
 
+local function refreshBikePrompts()
+	if noActiveBike() then
+		bikeStatusLabel.Text = "NO BIKE ACTIVE"
+		bikeStatusLabel.TextColor3 = Config.UI.Danger
+		promptLabel.Text = "No bike active • Click Spawn Bike or press M • Free starters are ready in the garage"
+		garageButton.Text = "SPAWN BIKE"
+		garageButton.BackgroundColor3 = Config.UI.Success
+		noBikeCallout.Visible = true
+	else
+		bikeStatusLabel.Text = "ACTIVE BIKE READY"
+		bikeStatusLabel.TextColor3 = Config.UI.Success
+		promptLabel.Text = "Garage on HUD • R respawn bike • Q hop • Break line of sight to cool heat"
+		garageButton.Text = "GARAGE"
+		garageButton.BackgroundColor3 = Config.UI.Accent
+		noBikeCallout.Visible = false
+	end
+end
+
+local function requestRespawn()
+	if noActiveBike() then
+		openGarage(true)
+		setToast("No bike out. Pick one in the garage first.", Config.UI.Accent)
+		return
+	end
+
+	local ok, response = pcall(function()
+		return bikeAction:InvokeServer("RespawnBike", { BikeId = localState.EquippedBikeId })
+	end)
+	if ok and response then
+		setToast(response.Message or "Bike respawned.", response.Success and Config.UI.Success or Config.UI.Danger)
+	end
+end
+
+local function handleGarageButton()
+	openGarage(noActiveBike())
+	if noActiveBike() then
+		setToast("Pick a free starter and hit Equip & Spawn.", Config.UI.Accent)
+	else
+		setToast("Garage opened.", Config.UI.Accent)
+	end
+end
+
+garageButton.MouseButton1Click:Connect(handleGarageButton)
+noBikeButton.MouseButton1Click:Connect(handleGarageButton)
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then
 		return
 	end
 
 	if input.KeyCode == Enum.KeyCode.R then
-		local ok, response = pcall(function()
-			return bikeAction:InvokeServer("RespawnBike", { BikeId = localState.EquippedBikeId })
-		end)
-		if ok and response then
-			setToast(response.Message or "Bike respawned.", response.Success and Config.UI.Success or Config.UI.Danger)
-		end
+		requestRespawn()
 	end
 end)
 
@@ -309,14 +435,19 @@ dataSyncRemote.OnClientEvent:Connect(function(snapshot)
 		return
 	end
 	localState.EquippedBikeId = snapshot.EquippedBikeId
+	refreshBikePrompts()
 end)
 
-for _, attributeName in ipairs({ "StreetLegalSpeedMph", "StreetLegalGear", "StreetLegalBikeName", "StreetLegalComboText", "StreetLegalDistrict" }) do
-	player:GetAttributeChangedSignal(attributeName):Connect(refreshSpeed)
+for _, attributeName in ipairs({ "StreetLegalSpeedMph", "StreetLegalGear", "StreetLegalBikeName", "StreetLegalComboText", "StreetLegalDistrict", "StreetLegalActiveBikeId" }) do
+	player:GetAttributeChangedSignal(attributeName):Connect(function()
+		refreshSpeed()
+		refreshBikePrompts()
+	end)
 end
 
 refreshSpeed()
 refreshHeat()
+refreshBikePrompts()
 
 RunService.RenderStepped:Connect(function()
 	refreshMinimap()
@@ -324,4 +455,5 @@ RunService.RenderStepped:Connect(function()
 		toastLabel.Text = ""
 	end
 	refreshSpeed()
+	refreshBikePrompts()
 end)

@@ -3,8 +3,8 @@ local RunService = game:GetService("RunService")
 local Config = {
 	Experience = {
 		Name = "Street Legal",
-		Version = "0.1.0",
-		Build = "mvp-production",
+		Version = "0.2.0",
+		Build = "ux-visual-pass",
 	},
 	Gameplay = {
 		DataStoreName = "StreetLegal_PlayerData_v1",
