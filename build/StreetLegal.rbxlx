@@ -646,7 +646,7 @@ local WantedService = require(ServerScriptService.Services.WantedService)
 local PurchaseService = require(ServerScriptService.Services.PurchaseService)
 local SpawnService = require(ServerScriptService.Services.SpawnService)
 
-Workspace.StreamingEnabled = true
+-- StreamingEnabled is configured in default.project.json; runtime writes fail in Studio play mode.
 ReplicatedStorage:SetAttribute("StreetLegalBootstrapReady", false)
 
 DataService:Init(remotes)
@@ -4548,7 +4548,7 @@ local districtDefs = {
 }
 
 local function applyLighting()
-	Lighting.Technology = Enum.Technology.Future
+	-- Lighting.Technology is configured in default.project.json; runtime writes fail in Studio play mode.
 	Lighting.ClockTime = 16.1
 	Lighting.Brightness = 2.6
 	Lighting.Ambient = Color3.fromRGB(28, 30, 38)

@@ -20,7 +20,7 @@ local WantedService = require(ServerScriptService.Services.WantedService)
 local PurchaseService = require(ServerScriptService.Services.PurchaseService)
 local SpawnService = require(ServerScriptService.Services.SpawnService)
 
-Workspace.StreamingEnabled = true
+-- StreamingEnabled is configured in default.project.json; runtime writes fail in Studio play mode.
 ReplicatedStorage:SetAttribute("StreetLegalBootstrapReady", false)
 
 DataService:Init(remotes)

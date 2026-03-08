@@ -92,7 +92,7 @@ local districtDefs = {
 }
 
 local function applyLighting()
-	Lighting.Technology = Enum.Technology.Future
+	-- Lighting.Technology is configured in default.project.json; runtime writes fail in Studio play mode.
 	Lighting.ClockTime = 16.1
 	Lighting.Brightness = 2.6
 	Lighting.Ambient = Color3.fromRGB(28, 30, 38)
