@@ -137,7 +137,7 @@ promptLabel.Font = Enum.Font.Gotham
 promptLabel.TextSize = 13
 promptLabel.TextColor3 = Color3.fromRGB(190, 195, 202)
 promptLabel.TextXAlignment = Enum.TextXAlignment.Left
-promptLabel.Text = "Garage on HUD • R respawn bike • Q hop • Break line of sight to cool heat"
+promptLabel.Text = "Garage on HUD • R respawn bike • Q hop • Ctrl + W wheelie • Tap W to balance"
 promptLabel.Parent = heatFrame
 
 local comboLabel = Instance.new("TextLabel")
@@ -361,7 +361,7 @@ local function refreshBikePrompts()
 	else
 		bikeStatusLabel.Text = "ACTIVE BIKE READY"
 		bikeStatusLabel.TextColor3 = Config.UI.Success
-		promptLabel.Text = "Garage on HUD • R respawn bike • Q hop • Break line of sight to cool heat"
+		promptLabel.Text = "Garage on HUD • R respawn bike • Q hop • Ctrl + W wheelie • Tap W to balance"
 		garageButton.Text = "GARAGE"
 		garageButton.BackgroundColor3 = Config.UI.Accent
 		noBikeCallout.Visible = false

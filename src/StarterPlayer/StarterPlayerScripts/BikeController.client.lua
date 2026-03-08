@@ -27,6 +27,15 @@ local controller = {
 	AirborneYaw = nil,
 	ComboExpiresAt = 0,
 	NextNearMissAt = 0,
+	Grounded = false,
+	GroundNormal = Vector3.yAxis,
+	WheelieArmedUntil = 0,
+	WheelieTriggerUntil = 0,
+	WheelieCooldownUntil = 0,
+	WheelieActive = false,
+	WheeliePitch = 0,
+	WheelieTargetPitch = 0,
+	LastWheelieTapAt = 0,
 }
 
 local function clearHudState()
@@ -52,18 +61,35 @@ local function getYawFromCFrame(cf)
 	return yaw
 end
 
+local function approach(current, target, delta)
+	if current < target then
+		return math.min(current + delta, target)
+	end
+	return math.max(current - delta, target)
+end
+
+local function resetWheelie(controllerState)
+	controllerState.WheelieArmedUntil = 0
+	controllerState.WheelieTriggerUntil = 0
+	controllerState.WheelieCooldownUntil = 0
+	controllerState.WheelieActive = false
+	controllerState.WheeliePitch = 0
+	controllerState.WheelieTargetPitch = 0
+	controllerState.LastWheelieTapAt = 0
+end
+
 local function getGroundInfo(origin, ignore)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = ignore
 	params.IgnoreWater = false
 
-	local result = Workspace:Raycast(origin + Vector3.new(0, 2, 0), Vector3.new(0, -Config.Bike.GroundRayLength, 0), params)
+	local result = Workspace:Raycast(origin + Vector3.new(0, 2.5, 0), Vector3.new(0, -Config.Bike.GroundRayLength, 0), params)
 	if not result then
 		return false, nil, "Unknown"
 	end
 
-	return true, result.Instance, result.Instance:GetAttribute("SurfaceType") or "Unknown"
+	return true, result, result.Instance:GetAttribute("SurfaceType") or "Unknown"
 end
 
 local function getActiveBikeFromSeat(humanoid)
@@ -133,6 +159,113 @@ local function applyCombo(controllerState, airtime)
 	})
 end
 
+local function applyTraversalAssist(controllerState, groundResult, look, dt)
+	local hull = controllerState.Hull
+	if not hull or not groundResult then
+		return
+	end
+
+	local rideAssist = Config.Bike.RideAssist
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { controllerState.BikeModel, player.Character }
+	params.IgnoreWater = false
+
+	local desiredCenterY = groundResult.Position.Y + rideAssist.TargetCenterHeight
+	local heightError = desiredCenterY - hull.Position.Y
+	if heightError > rideAssist.HeightSnapThreshold and hull.AssemblyLinearVelocity.Y <= 8 then
+		local lift = hull.AssemblyMass * rideAssist.SuspensionForce * heightError * dt
+		hull:ApplyImpulse(Vector3.new(0, lift, 0))
+	end
+
+	if controllerState.Speed <= 0.5 then
+		return
+	end
+
+	local frontOrigin = hull.Position + (look * rideAssist.FrontProbeDistance)
+	local frontResult = Workspace:Raycast(frontOrigin + Vector3.new(0, 2.5, 0), Vector3.new(0, -Config.Bike.GroundRayLength, 0), params)
+	if not frontResult then
+		return
+	end
+
+	local stepHeight = frontResult.Position.Y - groundResult.Position.Y
+	if stepHeight > 0.12 and stepHeight <= rideAssist.StepHeight then
+		local factor = math.clamp(stepHeight / rideAssist.StepHeight, 0.2, 1)
+		local lift = hull.AssemblyMass * rideAssist.StepLiftImpulse * factor
+		hull:ApplyImpulse(Vector3.new(0, lift, 0))
+	end
+end
+
+local function boostWheelie(controllerState, amount)
+	local wheelieConfig = Config.Bike.Wheelie
+	controllerState.WheelieActive = true
+	controllerState.WheelieTargetPitch = math.clamp(
+		math.max(controllerState.WheelieTargetPitch, wheelieConfig.SustainAngle) + amount,
+		wheelieConfig.SustainAngle,
+		wheelieConfig.MaxAngle
+	)
+	controllerState.LastWheelieTapAt = currentTime()
+end
+
+local function tryStartWheelie(controllerState, grounded, throttle, look, topSpeed)
+	local nowStamp = currentTime()
+	local wheelieConfig = Config.Bike.Wheelie
+	if controllerState.WheelieTriggerUntil <= 0 or nowStamp > controllerState.WheelieTriggerUntil then
+		return
+	end
+	if nowStamp < controllerState.WheelieCooldownUntil then
+		return
+	end
+
+	local speedMph = math.max(0, controllerState.Speed) / Config.Bike.MphToStuds
+	if not grounded or throttle <= 0 or speedMph < wheelieConfig.MinSpeedMph or not controllerState.Hull then
+		return
+	end
+
+	controllerState.WheelieTriggerUntil = 0
+	controllerState.WheelieArmedUntil = 0
+	controllerState.WheelieCooldownUntil = nowStamp + wheelieConfig.Cooldown
+	controllerState.WheelieActive = true
+	controllerState.WheelieTargetPitch = wheelieConfig.PopAngle
+	controllerState.LastWheelieTapAt = nowStamp
+	controllerState.Speed = math.min(topSpeed, controllerState.Speed + (wheelieConfig.PopSpeedBoostMph * Config.Bike.MphToStuds))
+
+	local impulsePosition = controllerState.Hull.Position - (look * (controllerState.Hull.Size.Z * 0.28))
+	controllerState.Hull:ApplyImpulseAtPosition(
+		Vector3.new(0, controllerState.Hull.AssemblyMass * wheelieConfig.PopImpulse, 0),
+		impulsePosition
+	)
+end
+
+local function updateWheelie(controllerState, grounded, throttle, look, topSpeed, dt)
+	local wheelieConfig = Config.Bike.Wheelie
+	tryStartWheelie(controllerState, grounded, throttle, look, topSpeed)
+
+	local speedMph = math.max(0, controllerState.Speed) / Config.Bike.MphToStuds
+	if controllerState.WheelieActive then
+		if speedMph < wheelieConfig.SustainSpeedMph or throttle < 0 then
+			controllerState.WheelieTargetPitch = math.max(0, controllerState.WheelieTargetPitch - (wheelieConfig.ExitRate * dt))
+		else
+			local minTarget = throttle > 0 and wheelieConfig.SustainAngle or 0
+			if currentTime() - controllerState.LastWheelieTapAt > wheelieConfig.TapGrace then
+				controllerState.WheelieTargetPitch = math.max(minTarget, controllerState.WheelieTargetPitch - (wheelieConfig.DecayRate * dt))
+			else
+				controllerState.WheelieTargetPitch = math.max(controllerState.WheelieTargetPitch, minTarget)
+			end
+		end
+
+		if controllerState.WheelieTargetPitch <= 0.05 and controllerState.WheeliePitch <= 0.05 then
+			controllerState.WheelieActive = false
+			controllerState.WheelieTargetPitch = 0
+		end
+	else
+		controllerState.WheelieTargetPitch = 0
+	end
+
+	local rate = controllerState.WheelieTargetPitch > controllerState.WheeliePitch and wheelieConfig.RiseRate or wheelieConfig.FallRate
+	controllerState.WheeliePitch = approach(controllerState.WheeliePitch, controllerState.WheelieTargetPitch, rate * dt)
+end
+
 local function setActiveBike(controllerState, bikeModel)
 	if controllerState.BikeModel == bikeModel then
 		return
@@ -146,6 +279,9 @@ local function setActiveBike(controllerState, bikeModel)
 	controllerState.Speed = 0
 	controllerState.AirborneAt = nil
 	controllerState.AirborneYaw = nil
+	controllerState.Grounded = false
+	controllerState.GroundNormal = Vector3.yAxis
+	resetWheelie(controllerState)
 
 	if controllerState.Hull then
 		controllerState.Yaw = getYawFromCFrame(controllerState.Hull.CFrame)
@@ -167,9 +303,12 @@ local function updateBikePhysics(controllerState, dt)
 	local hull = controllerState.Hull
 	local character = player.Character
 	local throttle = controllerState.Seat.ThrottleFloat
-	local steer = controllerState.Seat.SteerFloat
+	local steer = controllerState.Seat.SteerFloat * (Config.Bike.ArcadeController.SteeringInputSign or -1)
 	local nowStamp = currentTime()
-	local grounded, _, surfaceType = getGroundInfo(hull.Position, { controllerState.BikeModel, character })
+	local grounded, groundResult, surfaceType = getGroundInfo(hull.Position, { controllerState.BikeModel, character })
+	controllerState.Grounded = grounded
+	controllerState.GroundNormal = groundResult and groundResult.Normal or Vector3.yAxis
+
 	local topSpeed = bike.TopSpeedStuds
 	local accel = Config.Bike.ArcadeController.BaseAcceleration * bike.Acceleration
 	local brake = Config.Bike.ArcadeController.BaseBrake * bike.Durability
@@ -204,14 +343,22 @@ local function updateBikePhysics(controllerState, dt)
 	controllerState.Yaw += steer * turnRate * steerFactor * airFactor * dt * (controllerState.Speed >= 0 and 1 or -1)
 
 	local look = CFrame.fromOrientation(0, controllerState.Yaw, 0).LookVector
+	updateWheelie(controllerState, grounded, throttle, look, topSpeed, dt)
+
 	local currentVelocity = hull.AssemblyLinearVelocity
 	local horizontalVelocity = Vector3.new(currentVelocity.X, 0, currentVelocity.Z)
 	local sideVelocity = horizontalVelocity - (look * horizontalVelocity:Dot(look))
 	local targetHorizontal = (look * controllerState.Speed) - (sideVelocity * Config.Bike.ArcadeController.SideSlipDamp)
 	hull.AssemblyLinearVelocity = Vector3.new(targetHorizontal.X, currentVelocity.Y, targetHorizontal.Z)
 
+	if grounded and groundResult then
+		applyTraversalAssist(controllerState, groundResult, look, dt)
+	end
+
 	if controllerState.Align then
-		controllerState.Align.CFrame = CFrame.lookAt(hull.Position, hull.Position + look, Vector3.yAxis)
+		controllerState.Align.CFrame = CFrame.new(hull.Position)
+			* CFrame.Angles(0, controllerState.Yaw, 0)
+			* CFrame.Angles(math.rad(-controllerState.WheeliePitch), 0, 0)
 	end
 
 	if controllerState.HopQueued and grounded and nowStamp >= controllerState.NextHopAt then
@@ -235,7 +382,11 @@ local function updateBikePhysics(controllerState, dt)
 	local speedMph = math.floor((math.abs(controllerState.Speed) / Config.Bike.MphToStuds) + 0.5)
 	local gear = "Neutral"
 	if controllerState.Speed > 1 then
-		gear = surfaceType == "OffRoad" and "Trail" or "Drive"
+		if controllerState.WheelieActive and controllerState.WheeliePitch > 1.5 then
+			gear = "Wheelie"
+		else
+			gear = surfaceType == "OffRoad" and "Trail" or "Drive"
+		end
 	elseif controllerState.Speed < -1 then
 		gear = "Reverse"
 	end
@@ -257,6 +408,19 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 
 	if input.KeyCode == Enum.KeyCode.Q then
 		controller.HopQueued = true
+	elseif input.KeyCode == Enum.KeyCode.LeftControl or input.KeyCode == Enum.KeyCode.RightControl then
+		controller.WheelieArmedUntil = currentTime() + Config.Bike.Wheelie.ArmWindow
+	elseif input.KeyCode == Enum.KeyCode.W then
+		local nowStamp = currentTime()
+		if controller.BikeModel and controller.BikeDef then
+			if controller.WheelieActive then
+				boostWheelie(controller, Config.Bike.Wheelie.BalanceTapAngle)
+				controller.Speed = math.min(controller.BikeDef.TopSpeedStuds, controller.Speed + (Config.Bike.Wheelie.TapBoostMph * Config.Bike.MphToStuds))
+			elseif nowStamp <= controller.WheelieArmedUntil then
+				controller.WheelieTriggerUntil = nowStamp + Config.Bike.Wheelie.TriggerWindow
+				controller.LastWheelieTapAt = nowStamp
+			end
+		end
 	end
 end)
 
@@ -280,6 +444,7 @@ RunService.RenderStepped:Connect(function(dt)
 	if controller.BikeModel then
 		updateBikePhysics(controller, dt)
 	else
+		resetWheelie(controller)
 		if currentTime() >= controller.ComboExpiresAt then
 			player:SetAttribute("StreetLegalComboText", "")
 			player:SetAttribute("StreetLegalComboScore", 0)

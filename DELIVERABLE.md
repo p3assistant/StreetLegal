@@ -7,6 +7,9 @@ Update Addendum — 2026-03-08 Stronger Environment + UX + Bike Pass
 - Bike visuals were rebuilt into more recognizable electric dirt bike silhouettes using Roblox parts/primitives, then refined further with added bodywork/detail pieces for stronger modern e-bike read.
 - Bike names/descriptions were refreshed toward original e-dirt-bike-inspired lineup language instead of generic placeholder bikes.
 - New visual tuning module: `src/ReplicatedStorage/Modules/BikeVisuals.lua`
+- Steering input was corrected so `A`/left now yaws the bike left and `D`/right yaws it right.
+- Traversal surfaces were normalized so roads, sidewalks, plazas, promenade/boardwalk space, and major park/quarry ride zones sit on effectively uniform rideable heights with decorative curbs no longer blocking bikes.
+- Keyboard wheelie controls were added: tap `Ctrl`, then press `W` to pop a wheelie; repeated `W` taps let the rider hold and rebalance the balance point.
 - The map generator received a substantial art-direction pass: improved lighting/atmosphere, road dressing, district identity, waterfront treatment, park/quarry shaping, props, signage, harbor structures, and more deliberate building silhouettes.
 
 Assumptions
@@ -122,6 +125,8 @@ C) Systems Design
 - HUD shows speed, gear, district, wanted state, combo text, and minimap.
 - `R` respawns the equipped bike.
 - `Q` triggers hop/jump impulse.
+- `Ctrl`, then `W` pops a wheelie.
+- Repeated `W` taps while the wheelie is up nudge the balance point higher and keep the wheelie alive.
 
 **Multiplayer / Anti-Exploit**
 - Currency, ownership, wanted state, and arrest logic are server authoritative.
@@ -2904,6 +2909,8 @@ F) Testing & Launch Checklist
 - [ ] Spawn each free starter bike
 - [ ] Confirm `R` respawns the equipped bike
 - [ ] Confirm `Q` hop works while mounted
+- [ ] Confirm `Ctrl` then `W` reliably pops a wheelie
+- [ ] Confirm repeated `W` taps visibly sustain/control the wheelie
 - [ ] Trigger heat with speeding and illegal bikes
 - [ ] Confirm police begin patrol/chase and can arrest
 - [ ] Confirm arrest teleports to station and removes heat

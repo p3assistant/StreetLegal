@@ -296,13 +296,13 @@ function PurchaseService:CreateBikeModel(player, bikeId)
 		model,
 		"Part",
 		"Hull",
-		Vector3.new(2.0, 1.4, g.Wheelbase + 0.7),
-		spawnCFrame * CFrame.new(0, 0.62, 0),
+		Vector3.new(1.9, 1.2, g.Wheelbase + 0.35),
+		spawnCFrame * CFrame.new(0, 0.88, 0),
 		paint,
 		Enum.Material.SmoothPlastic,
 		{ Transparency = 1, CanCollide = true, Massless = false, CastShadow = false }
 	)
-	hull.CustomPhysicalProperties = PhysicalProperties.new(1.15, 0.8, 0.1, 1, 1)
+	hull.CustomPhysicalProperties = PhysicalProperties.new(1.05, 0.25, 0.05, 1, 1)
 	model.PrimaryPart = hull
 
 	local function decorPart(name, size, localPosition, color, material, options)

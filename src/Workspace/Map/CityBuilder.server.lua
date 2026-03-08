@@ -30,6 +30,17 @@ for _, name in ipairs({ "Ground", "Roads", "Buildings", "Props", "DistrictSigns"
 	sections[name] = folder
 end
 
+local RIDE_SURFACE_TOP_Y = 0.6
+
+local function cframeWithTop(position, size, topY, rotationSource)
+	topY = topY or RIDE_SURFACE_TOP_Y
+	local targetPosition = Vector3.new(position.X, topY - (size.Y * 0.5), position.Z)
+	if rotationSource then
+		return CFrame.fromMatrix(targetPosition, rotationSource.XVector, rotationSource.YVector, rotationSource.ZVector)
+	end
+	return CFrame.new(targetPosition)
+end
+
 local palettes = {
 	RedlineRow = {
 		Ground = Color3.fromRGB(118, 83, 72),
@@ -168,11 +179,11 @@ local function tagNearMiss(part, district)
 end
 
 local function makeRoad(name, size, cframe, district)
-	return tagSurface(makePart(sections.Roads, name, size, cframe, Color3.fromRGB(37, 41, 46), Enum.Material.Asphalt), district, "Street")
+	return tagSurface(makePart(sections.Roads, name, size, cframeWithTop(cframe.Position, size, nil, cframe), Color3.fromRGB(37, 41, 46), Enum.Material.Asphalt), district, "Street")
 end
 
 local function makeSidewalk(name, size, cframe, district)
-	return tagSurface(makePart(sections.Roads, name, size, cframe, Color3.fromRGB(148, 148, 152), Enum.Material.Concrete), district, "Sidewalk")
+	return tagSurface(makePart(sections.Roads, name, size, cframeWithTop(cframe.Position, size, nil, cframe), Color3.fromRGB(148, 148, 152), Enum.Material.Concrete), district, "Sidewalk")
 end
 
 local function makeTrim(parent, name, size, cframe, color, material, district)
@@ -356,7 +367,7 @@ local function makeCrane(basePosition, district)
 end
 
 local function makePier(basePosition, district, width, depth)
-	local deck = makePart(sections.Waterfront, "PierDeck", Vector3.new(width, 2, depth), CFrame.new(basePosition + Vector3.new(0, 1, 0)), Color3.fromRGB(118, 99, 71), Enum.Material.WoodPlanks)
+	local deck = makePart(sections.Waterfront, "PierDeck", Vector3.new(width, 2, depth), cframeWithTop(basePosition, Vector3.new(width, 2, depth)), Color3.fromRGB(118, 99, 71), Enum.Material.WoodPlanks)
 	tagNearMiss(deck, district)
 	for x = -(width * 0.5) + 8, (width * 0.5) - 8, 20 do
 		for _, z in ipairs({ -(depth * 0.5) + 4, (depth * 0.5) - 4 }) do
@@ -392,7 +403,7 @@ end
 local function makeSpawnLot(spawnDef)
 	local palette = palettes[spawnDef.District] or palettes.City
 	local baseCFrame = CFrame.new(spawnDef.Position) * CFrame.Angles(0, math.rad(spawnDef.Heading or 0), 0)
-	local lot = makePart(sections.Props, spawnDef.Name .. "Lot", Vector3.new(42, 0.6, 26), baseCFrame * CFrame.new(0, 0.3, 0), Color3.fromRGB(52, 54, 58), Enum.Material.Asphalt)
+	local lot = makePart(sections.Props, spawnDef.Name .. "Lot", Vector3.new(42, 0.6, 26), cframeWithTop(baseCFrame.Position, Vector3.new(42, 0.6, 26), nil, baseCFrame), Color3.fromRGB(52, 54, 58), Enum.Material.Asphalt)
 	tagSurface(lot, spawnDef.District, "Street")
 	local padGlow = makePart(sections.Props, spawnDef.Name .. "PadGlow", Vector3.new(12, 0.16, 12), baseCFrame * CFrame.new(0, 0.69, 0), spawnDef.Color, Enum.Material.Neon, {
 		CanCollide = false,
@@ -436,8 +447,14 @@ for _, x in ipairs({ -780, -540, -300, -60, 180, 420, 660 }) do
 	makeRoad("Avenue_" .. tostring(x), Vector3.new(42, 1, 1840), CFrame.new(x, 0.1, 0), district)
 	makeSidewalk("AvenueSidewalkL_" .. tostring(x), Vector3.new(10, 1, 1840), CFrame.new(x - 26, 0.3, 0), district)
 	makeSidewalk("AvenueSidewalkR_" .. tostring(x), Vector3.new(10, 1, 1840), CFrame.new(x + 26, 0.3, 0), district)
-	makePart(sections.Roads, "AvenueCurbL_" .. tostring(x), Vector3.new(1.2, 0.6, 1840), CFrame.new(x - 20.8, 0.55, 0), Color3.fromRGB(176, 176, 176), Enum.Material.Concrete)
-	makePart(sections.Roads, "AvenueCurbR_" .. tostring(x), Vector3.new(1.2, 0.6, 1840), CFrame.new(x + 20.8, 0.55, 0), Color3.fromRGB(176, 176, 176), Enum.Material.Concrete)
+	makePart(sections.Roads, "AvenueCurbL_" .. tostring(x), Vector3.new(0.4, 0.08, 1840), CFrame.new(x - 20.8, RIDE_SURFACE_TOP_Y + 0.04, 0), Color3.fromRGB(176, 176, 176), Enum.Material.Concrete, {
+		CanCollide = false,
+		CastShadow = false,
+	})
+	makePart(sections.Roads, "AvenueCurbR_" .. tostring(x), Vector3.new(0.4, 0.08, 1840), CFrame.new(x + 20.8, RIDE_SURFACE_TOP_Y + 0.04, 0), Color3.fromRGB(176, 176, 176), Enum.Material.Concrete, {
+		CanCollide = false,
+		CastShadow = false,
+	})
 	addRoadMarkingsVertical(x, -840, 840)
 end
 
@@ -453,8 +470,14 @@ for _, z in ipairs({ -780, -540, -300, -60, 180, 420, 660 }) do
 	makeRoad("Street_" .. tostring(z), Vector3.new(1840, 1, 42), CFrame.new(0, 0.1, z), district)
 	makeSidewalk("StreetSidewalkTop_" .. tostring(z), Vector3.new(1840, 1, 10), CFrame.new(0, 0.3, z - 26), district)
 	makeSidewalk("StreetSidewalkBottom_" .. tostring(z), Vector3.new(1840, 1, 10), CFrame.new(0, 0.3, z + 26), district)
-	makePart(sections.Roads, "StreetCurbTop_" .. tostring(z), Vector3.new(1840, 0.6, 1.2), CFrame.new(0, 0.55, z - 20.8), Color3.fromRGB(176, 176, 176), Enum.Material.Concrete)
-	makePart(sections.Roads, "StreetCurbBottom_" .. tostring(z), Vector3.new(1840, 0.6, 1.2), CFrame.new(0, 0.55, z + 20.8), Color3.fromRGB(176, 176, 176), Enum.Material.Concrete)
+	makePart(sections.Roads, "StreetCurbTop_" .. tostring(z), Vector3.new(1840, 0.08, 0.4), CFrame.new(0, RIDE_SURFACE_TOP_Y + 0.04, z - 20.8), Color3.fromRGB(176, 176, 176), Enum.Material.Concrete, {
+		CanCollide = false,
+		CastShadow = false,
+	})
+	makePart(sections.Roads, "StreetCurbBottom_" .. tostring(z), Vector3.new(1840, 0.08, 0.4), CFrame.new(0, RIDE_SURFACE_TOP_Y + 0.04, z + 20.8), Color3.fromRGB(176, 176, 176), Enum.Material.Concrete, {
+		CanCollide = false,
+		CastShadow = false,
+	})
 	addRoadMarkingsHorizontal(z, -840, 840)
 end
 
@@ -491,8 +514,8 @@ local canalLeft = makePart(sections.Waterfront, "CanalLeftWall", Vector3.new(520
 local canalRight = makePart(sections.Waterfront, "CanalRightWall", Vector3.new(520, 18, 8), CFrame.new(390, -0.5, -339), Color3.fromRGB(153, 156, 162), Enum.Material.Concrete)
 tagNearMiss(canalLeft, "CanalSide")
 tagNearMiss(canalRight, "CanalSide")
-makePart(sections.Waterfront, "CanalPromenadeNorth", Vector3.new(520, 2, 18), CFrame.new(390, 1, -260), Color3.fromRGB(128, 138, 144), Enum.Material.Concrete)
-makePart(sections.Waterfront, "CanalPromenadeSouth", Vector3.new(520, 2, 18), CFrame.new(390, 1, -360), Color3.fromRGB(128, 138, 144), Enum.Material.Concrete)
+tagSurface(makePart(sections.Waterfront, "CanalPromenadeNorth", Vector3.new(520, 2, 18), cframeWithTop(Vector3.new(390, 0, -260), Vector3.new(520, 2, 18)), Color3.fromRGB(128, 138, 144), Enum.Material.Concrete), "CanalSide", "Sidewalk")
+tagSurface(makePart(sections.Waterfront, "CanalPromenadeSouth", Vector3.new(520, 2, 18), cframeWithTop(Vector3.new(390, 0, -360), Vector3.new(520, 2, 18)), Color3.fromRGB(128, 138, 144), Enum.Material.Concrete), "CanalSide", "Sidewalk")
 for x = 150, 610, 46 do
 	makePart(sections.Waterfront, "CanalRailNorth" .. tostring(x), Vector3.new(1.2, 3, 1.2), CFrame.new(x, 2.5, -270), Color3.fromRGB(68, 72, 77), Enum.Material.Metal)
 	makePart(sections.Waterfront, "CanalRailSouth" .. tostring(x), Vector3.new(1.2, 3, 1.2), CFrame.new(x, 2.5, -350), Color3.fromRGB(68, 72, 77), Enum.Material.Metal)
@@ -503,7 +526,7 @@ for x = 150, 610, 46 do
 end
 
 makePart(sections.Waterfront, "HarborBulkhead", Vector3.new(28, 22, 1800), CFrame.new(762, 2, 0), Color3.fromRGB(108, 114, 120), Enum.Material.Concrete)
-makePart(sections.Waterfront, "HarborWalk", Vector3.new(90, 2, 900), CFrame.new(714, 1, -180), Color3.fromRGB(124, 129, 133), Enum.Material.Concrete)
+tagSurface(makePart(sections.Waterfront, "HarborWalk", Vector3.new(90, 2, 900), cframeWithTop(Vector3.new(714, 0, -180), Vector3.new(90, 2, 900)), Color3.fromRGB(124, 129, 133), Enum.Material.Concrete), "CanalSide", "Sidewalk")
 makePier(Vector3.new(800, 0, 210), "IronHarbor", 130, 52)
 makePier(Vector3.new(790, 0, -120), "CanalSide", 110, 44)
 for z = -520, 120, 160 do
@@ -542,7 +565,7 @@ for _, tower in ipairs({
 	makeMidrise(tower.Position, "PennMarket", tower.Width, tower.Depth, tower.Height, Color3.fromRGB(106, 111, 120), tower.Accent)
 end
 
-makePart(sections.Ground, "PennPlaza", Vector3.new(110, 2, 86), CFrame.new(14, 1, 274), Color3.fromRGB(136, 138, 145), Enum.Material.Concrete)
+tagSurface(makePart(sections.Ground, "PennPlaza", Vector3.new(110, 2, 86), cframeWithTop(Vector3.new(14, 0, 274), Vector3.new(110, 2, 86)), Color3.fromRGB(136, 138, 145), Enum.Material.Concrete), "PennMarket", "Sidewalk")
 for _, offset in ipairs({ Vector3.new(-28, 0, -18), Vector3.new(28, 0, -18), Vector3.new(-28, 0, 18), Vector3.new(28, 0, 18) }) do
 	makePlanter(Vector3.new(14, 0, 274) + offset, "PennMarket", Vector3.new(16, 2.2, 16), 0.75)
 end
@@ -551,10 +574,10 @@ makeBench(Vector3.new(42, 0, 274), "PennMarket", 180)
 makeParkedCar(Vector3.new(-44, 0, 228), "PennMarket", Color3.fromRGB(78, 130, 196), 0)
 makeParkedCar(Vector3.new(72, 0, 228), "PennMarket", Color3.fromRGB(222, 181, 73), 0)
 
-makePart(sections.Ground, "DruidGreen", Vector3.new(860, 2, 300), CFrame.new(-180, 0, -640), Color3.fromRGB(72, 127, 82), Enum.Material.Grass)
-makePart(sections.Ground, "DruidPathNorth", Vector3.new(520, 1, 12), CFrame.new(-180, 0.4, -700), Color3.fromRGB(176, 170, 157), Enum.Material.Concrete)
-makePart(sections.Ground, "DruidPathSouth", Vector3.new(620, 1, 12), CFrame.new(-160, 0.4, -596), Color3.fromRGB(176, 170, 157), Enum.Material.Concrete)
-makePart(sections.Ground, "SkatePad", Vector3.new(180, 1, 96), CFrame.new(-270, 0.45, -688), Color3.fromRGB(112, 118, 122), Enum.Material.Concrete)
+tagSurface(makePart(sections.Ground, "DruidGreen", Vector3.new(860, 2, 300), cframeWithTop(Vector3.new(-180, 0, -640), Vector3.new(860, 2, 300)), Color3.fromRGB(72, 127, 82), Enum.Material.Grass), "DruidHeights", "OffRoad")
+tagSurface(makePart(sections.Ground, "DruidPathNorth", Vector3.new(520, 1, 12), cframeWithTop(Vector3.new(-180, 0, -700), Vector3.new(520, 1, 12)), Color3.fromRGB(176, 170, 157), Enum.Material.Concrete), "DruidHeights", "Sidewalk")
+tagSurface(makePart(sections.Ground, "DruidPathSouth", Vector3.new(620, 1, 12), cframeWithTop(Vector3.new(-160, 0, -596), Vector3.new(620, 1, 12)), Color3.fromRGB(176, 170, 157), Enum.Material.Concrete), "DruidHeights", "Sidewalk")
+tagSurface(makePart(sections.Ground, "SkatePad", Vector3.new(180, 1, 96), cframeWithTop(Vector3.new(-270, 0, -688), Vector3.new(180, 1, 96)), Color3.fromRGB(112, 118, 122), Enum.Material.Concrete), "DruidHeights", "Sidewalk")
 for x = -520, 130, 80 do
 	makeTree(Vector3.new(x, 0, -736), "DruidHeights", 1)
 end
@@ -598,7 +621,7 @@ for _, loft in ipairs({
 	makeMidrise(loft.Position, "CanalSide", loft.Width, loft.Depth, loft.Height, Color3.fromRGB(88, 104, 118), palettes.CanalSide.Accent)
 end
 
-makePart(sections.Waterfront, "BoardwalkDeck", Vector3.new(120, 2, 250), CFrame.new(760, 1, -100), Color3.fromRGB(121, 104, 74), Enum.Material.WoodPlanks)
+tagSurface(makePart(sections.Waterfront, "BoardwalkDeck", Vector3.new(120, 2, 250), cframeWithTop(Vector3.new(760, 0, -100), Vector3.new(120, 2, 250)), Color3.fromRGB(121, 104, 74), Enum.Material.WoodPlanks), "CanalSide", "Sidewalk")
 for z = -200, 0, 40 do
 	makeLightPole(Vector3.new(804, 0, z), "CanalSide", 14)
 	makeBench(Vector3.new(728, 0, z + 12), "CanalSide", 90)
@@ -607,7 +630,7 @@ for _, patch in ipairs({ Vector3.new(615, 0, -405), Vector3.new(708, 0, -380), V
 	makePlanter(patch, "CanalSide", Vector3.new(18, 2, 12), 0.68)
 end
 
-makePart(sections.Ground, "QuarryDirt", Vector3.new(460, 2, 560), CFrame.new(-720, 0, 580), Color3.fromRGB(128, 96, 62), Enum.Material.Ground)
+tagSurface(makePart(sections.Ground, "QuarryDirt", Vector3.new(460, 2, 560), cframeWithTop(Vector3.new(-720, 0, 580), Vector3.new(460, 2, 560)), Color3.fromRGB(128, 96, 62), Enum.Material.Ground), "QuarryRun", "OffRoad")
 makeBerm(Vector3.new(-800, 0, 470), "QuarryRun", Vector3.new(120, 18, 110), 0)
 makeBerm(Vector3.new(-650, 0, 610), "QuarryRun", Vector3.new(136, 20, 120), 28)
 makeBerm(Vector3.new(-710, 0, 760), "QuarryRun", Vector3.new(96, 16, 80), -20)
@@ -670,7 +693,7 @@ stationMarker.CFrame = CFrame.new(Config.World.PoliceStationPosition)
 stationMarker.Parent = policeFolder
 
 makePart(policeGenerated, "StationBase", Vector3.new(92, 2, 64), CFrame.new(315, 1, -45), Color3.fromRGB(132, 132, 142), Enum.Material.Concrete)
-makePart(policeGenerated, "StationForecourt", Vector3.new(46, 1, 34), CFrame.new(315, 0.4, 8), Color3.fromRGB(48, 49, 54), Enum.Material.Asphalt)
+tagSurface(makePart(policeGenerated, "StationForecourt", Vector3.new(46, 1, 34), cframeWithTop(Vector3.new(315, 0, 8), Vector3.new(46, 1, 34)), Color3.fromRGB(48, 49, 54), Enum.Material.Asphalt), "PennMarket", "Street")
 makeMidrise(Vector3.new(315, 0, -45), "PennMarket", 74, 40, 24, Color3.fromRGB(92, 98, 108), Color3.fromRGB(96, 164, 220))
 local stationSign = makePart(policeGenerated, "StationSign", Vector3.new(22, 5, 1), CFrame.new(315, 12, -66), Color3.fromRGB(85, 147, 214), Enum.Material.Neon)
 addSurfaceGui(stationSign, "METRO POLICE", Color3.fromRGB(255, 255, 255))
