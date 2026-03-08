@@ -1,0 +1,10 @@
+*.rbxl
+*.rbxlx.lock
+*.rbxl.lock
+*.log
+*.tmp
+*.DS_Store
+sourcemap.json
+*.toml.bak
+build/
+!build/.gitkeep

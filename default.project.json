@@ -1,0 +1,69 @@
+{
+  "name": "StreetLegal",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Modules": {
+        "$path": "src/ReplicatedStorage/Modules"
+      },
+      "Remotes": {
+        "$path": "src/ReplicatedStorage/Remotes"
+      }
+    },
+    "ServerScriptService": {
+      "Bootstrap": {
+        "$path": "src/ServerScriptService/Bootstrap.server.lua"
+      },
+      "Services": {
+        "$path": "src/ServerScriptService/Services"
+      }
+    },
+    "StarterGui": {
+      "UI": {
+        "$path": "src/StarterGui/UI"
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "$path": "src/StarterPlayer/StarterPlayerScripts"
+      }
+    },
+    "Workspace": {
+      "$properties": {
+        "FilteringEnabled": true,
+        "StreamingEnabled": true,
+        "Gravity": 196.2
+      },
+      "Map": {
+        "$path": "src/Workspace/Map"
+      },
+      "Spawns": {
+        "$path": "src/Workspace/Spawns"
+      },
+      "Police": {
+        "$path": "src/Workspace/Police"
+      },
+      "Ramps": {
+        "$path": "src/Workspace/Ramps"
+      }
+    },
+    "Lighting": {
+      "$properties": {
+        "Ambient": [0.0549, 0.0588, 0.0667],
+        "Brightness": 2.25,
+        "ClockTime": 14.5,
+        "EnvironmentDiffuseScale": 0.35,
+        "EnvironmentSpecularScale": 0.35,
+        "GlobalShadows": true,
+        "OutdoorAmbient": [0.3725, 0.3922, 0.4314],
+        "Technology": "Future"
+      }
+    },
+    "SoundService": {
+      "$properties": {
+        "RespectFilteringEnabled": true,
+        "AmbientReverb": "City"
+      }
+    }
+  }
+}
