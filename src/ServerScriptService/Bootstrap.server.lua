@@ -18,6 +18,7 @@ end
 local DataService = require(ServerScriptService.Services.DataService)
 local WantedService = require(ServerScriptService.Services.WantedService)
 local PurchaseService = require(ServerScriptService.Services.PurchaseService)
+local SpawnService = require(ServerScriptService.Services.SpawnService)
 
 Workspace.StreamingEnabled = true
 ReplicatedStorage:SetAttribute("StreetLegalBootstrapReady", false)
@@ -25,5 +26,6 @@ ReplicatedStorage:SetAttribute("StreetLegalBootstrapReady", false)
 DataService:Init(remotes)
 WantedService:Init(DataService, remotes)
 PurchaseService:Init(DataService, WantedService, remotes)
+SpawnService:Init()
 
 ReplicatedStorage:SetAttribute("StreetLegalBootstrapReady", true)

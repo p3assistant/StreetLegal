@@ -11,6 +11,8 @@ local spawnsFolder = Workspace:WaitForChild("Spawns")
 local policeFolder = Workspace:WaitForChild("Police")
 local rampsFolder = Workspace:WaitForChild("Ramps")
 
+Workspace:SetAttribute("StreetLegalWorldReady", false)
+
 local generated = mapFolder:FindFirstChild("Generated")
 if generated then
 	generated:Destroy()
@@ -389,15 +391,22 @@ end
 
 local function makeSpawnLot(spawnDef)
 	local palette = palettes[spawnDef.District] or palettes.City
-	local lot = makePart(sections.Props, spawnDef.Name .. "Lot", Vector3.new(42, 1, 26), CFrame.new(spawnDef.Position + Vector3.new(0, -0.4, 0)), Color3.fromRGB(52, 54, 58), Enum.Material.Asphalt)
+	local baseCFrame = CFrame.new(spawnDef.Position) * CFrame.Angles(0, math.rad(spawnDef.Heading or 0), 0)
+	local lot = makePart(sections.Props, spawnDef.Name .. "Lot", Vector3.new(42, 0.6, 26), baseCFrame * CFrame.new(0, 0.3, 0), Color3.fromRGB(52, 54, 58), Enum.Material.Asphalt)
 	tagSurface(lot, spawnDef.District, "Street")
-	local awning = makePart(sections.Props, spawnDef.Name .. "Awning", Vector3.new(22, 1, 8), CFrame.new(spawnDef.Position + Vector3.new(0, 8, -10)), palette.Accent, Enum.Material.Metal)
+	local padGlow = makePart(sections.Props, spawnDef.Name .. "PadGlow", Vector3.new(12, 0.16, 12), baseCFrame * CFrame.new(0, 0.69, 0), spawnDef.Color, Enum.Material.Neon, {
+		CanCollide = false,
+		Transparency = 0.18,
+		CastShadow = false,
+	})
+	padGlow:SetAttribute("District", spawnDef.District)
+	local awning = makePart(sections.Props, spawnDef.Name .. "Awning", Vector3.new(22, 0.8, 8), baseCFrame * CFrame.new(0, 5.4, -10), palette.Accent, Enum.Material.Metal)
 	tagNearMiss(awning, spawnDef.District)
-	local backWall = makePart(sections.Props, spawnDef.Name .. "Wall", Vector3.new(22, 12, 1.5), CFrame.new(spawnDef.Position + Vector3.new(0, 6, -14)), Color3.fromRGB(63, 66, 72), Enum.Material.Concrete)
+	local backWall = makePart(sections.Props, spawnDef.Name .. "Wall", Vector3.new(22, 9, 1.5), baseCFrame * CFrame.new(0, 4.5, -14), Color3.fromRGB(63, 66, 72), Enum.Material.Concrete)
 	tagNearMiss(backWall, spawnDef.District)
 	addSurfaceGui(backWall, spawnDef.Name, Color3.fromRGB(245, 245, 245))
 	for offset = -12, 12, 8 do
-		makeLightPole(spawnDef.Position + Vector3.new(offset, 0, 14), spawnDef.District, 13)
+		makeLightPole((baseCFrame * CFrame.new(offset, 0, 14)).Position, spawnDef.District, 13)
 	end
 end
 
@@ -692,14 +701,14 @@ for _, spawnDef in ipairs(SpawnData) do
 	makeSpawnLot(spawnDef)
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = spawnDef.Name
-	spawn.Size = Vector3.new(12, 1, 12)
-	spawn.CFrame = CFrame.new(spawnDef.Position)
-	spawn.Transparency = 0.08
+	spawn.Size = Vector3.new(12, 0.2, 12)
+	spawn.CFrame = CFrame.new(spawnDef.Position + Vector3.new(0, 0.72, 0)) * CFrame.Angles(0, math.rad(spawnDef.Heading or 0), 0)
+	spawn.Transparency = 0.82
 	spawn.Color = spawnDef.Color
 	spawn.Material = Enum.Material.Neon
 	spawn.Anchored = true
 	spawn.Neutral = true
-	spawn.CanCollide = true
+	spawn.CanCollide = false
 	spawn.Enabled = true
 	spawn:SetAttribute("SpawnPad", true)
 	spawn:SetAttribute("District", spawnDef.District)

@@ -6,6 +6,7 @@ local Workspace = game:GetService("Workspace")
 local Config = require(ReplicatedStorage.Modules.Config)
 local BikeDefinitions = require(ReplicatedStorage.Modules.BikeDefinitions)
 local BikeVisuals = require(ReplicatedStorage.Modules.BikeVisuals)
+local SpawnUtil = require(script.Parent.SpawnUtil)
 
 local PurchaseService = {
 	ActiveBikes = {},
@@ -179,6 +180,11 @@ function PurchaseService:GetCatalog(player)
 	end
 
 	table.sort(catalog, function(a, b)
+		if a.UnlockType ~= b.UnlockType then
+			if a.UnlockType == "Free" or b.UnlockType == "Free" then
+				return a.UnlockType == "Free"
+			end
+		end
 		if a.Tier == b.Tier then
 			if a.Price == b.Price then
 				return a.DisplayName < b.DisplayName
@@ -200,27 +206,56 @@ function PurchaseService:GetGarageState(player)
 	}
 end
 
-function PurchaseService:GetSpawnCFrame(player)
+function PurchaseService:GetSpawnCFrame(player, bikeId)
+	local visual = BikeVisuals[bikeId] or BikeVisuals.default
+	local geometry = visual.Geometry
+	local groundOffset = math.max(
+		(geometry.FrontWheelRadius or 1.1) - (geometry.FrontAxleY or 0.55),
+		(geometry.RearWheelRadius or 1.1) - (geometry.RearAxleY or 0.55),
+		0.6
+	) + 0.05
+
 	local character = player.Character
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 	if rootPart then
 		local forward = rootPart.CFrame.LookVector
-		return CFrame.new(
-			rootPart.Position + (forward * Config.Gameplay.TeleportSpawnOffset) + Vector3.new(0, Config.Gameplay.BikeRespawnHeight, 0),
-			rootPart.Position + (forward * 60)
-		)
-	end
+		local flatForward = Vector3.new(forward.X, 0, forward.Z)
+		if flatForward.Magnitude < 0.001 then
+			flatForward = Vector3.new(0, 0, -1)
+		else
+			flatForward = flatForward.Unit
+		end
 
-	local spawns = Workspace:FindFirstChild("Spawns")
-	if spawns then
-		for _, descendant in ipairs(spawns:GetDescendants()) do
-			if descendant:IsA("BasePart") and descendant:GetAttribute("SpawnPad") then
-				return descendant.CFrame + Vector3.new(0, Config.Gameplay.BikeRespawnHeight, 0)
-			end
+		local candidatePosition = rootPart.Position + (flatForward * Config.Gameplay.TeleportSpawnOffset)
+		local grounded = SpawnUtil:ResolveGroundCFrame(
+			candidatePosition,
+			flatForward,
+			{ character },
+			Config.Gameplay.BikeRespawnHeight,
+			72,
+			groundOffset
+		)
+		if grounded then
+			return grounded
 		end
 	end
 
-	return CFrame.new(0, 8, 0)
+	local spawnPad = SpawnUtil:ChooseSpawnPad(player)
+	if spawnPad then
+		local grounded = SpawnUtil:ResolveGroundCFrame(
+			spawnPad.Position,
+			spawnPad.CFrame.LookVector,
+			{ spawnPad },
+			16,
+			72,
+			groundOffset
+		)
+		if grounded then
+			return grounded
+		end
+	end
+
+	return CFrame.new(0, groundOffset + 4, 0)
 end
 
 function PurchaseService:SetBikeNetworkOwner(model, player)
@@ -239,7 +274,7 @@ function PurchaseService:CreateBikeModel(player, bikeId)
 	local g = visual.Geometry
 	local c = visual.Colors
 	local paint = bike.Paint or c.Primary
-	local spawnCFrame = self:GetSpawnCFrame(player)
+	local spawnCFrame = self:GetSpawnCFrame(player, bikeId)
 
 	local model = Instance.new("Model")
 	model.Name = string.format("%s_%d", bikeId, player.UserId)

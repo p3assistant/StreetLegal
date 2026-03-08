@@ -644,6 +644,7 @@ end
 local DataService = require(ServerScriptService.Services.DataService)
 local WantedService = require(ServerScriptService.Services.WantedService)
 local PurchaseService = require(ServerScriptService.Services.PurchaseService)
+local SpawnService = require(ServerScriptService.Services.SpawnService)
 
 Workspace.StreamingEnabled = true
 ReplicatedStorage:SetAttribute("StreetLegalBootstrapReady", false)
@@ -651,6 +652,7 @@ ReplicatedStorage:SetAttribute("StreetLegalBootstrapReady", false)
 DataService:Init(remotes)
 WantedService:Init(DataService, remotes)
 PurchaseService:Init(DataService, WantedService, remotes)
+SpawnService:Init()
 
 ReplicatedStorage:SetAttribute("StreetLegalBootstrapReady", true)
 ]]></string>
@@ -700,6 +702,34 @@ local function reconcile(target, defaults)
 	return target
 end
 
+local function ensureFreeBikeOwnership(profile)
+	if type(profile.OwnedBikes) ~= "table" then
+		profile.OwnedBikes = {}
+	end
+
+	for bikeId, bike in pairs(BikeDefinitions) do
+		if bike.UnlockType == "Free" then
+			profile.OwnedBikes[bikeId] = true
+		end
+	end
+
+	if not profile.OwnedBikes[profile.EquippedBikeId] then
+		profile.EquippedBikeId = nil
+		for bikeId, owned in pairs(profile.OwnedBikes) do
+			if owned then
+				profile.EquippedBikeId = bikeId
+				break
+			end
+		end
+	end
+
+	if not profile.EquippedBikeId then
+		profile.EquippedBikeId = Config.Economy.StarterBikeId
+	end
+
+	return profile
+end
+
 local function buildDefaultProfile()
 	local profile = {
 		Cash = Config.Economy.StarterCash,
@@ -713,22 +743,7 @@ local function buildDefaultProfile()
 		},
 	}
 
-	for bikeId, bike in pairs(BikeDefinitions) do
-		if bike.UnlockType == "Free" then
-			profile.OwnedBikes[bikeId] = true
-		end
-	end
-
-	if not profile.OwnedBikes[profile.EquippedBikeId] then
-		for bikeId, owned in pairs(profile.OwnedBikes) do
-			if owned then
-				profile.EquippedBikeId = bikeId
-				break
-			end
-		end
-	end
-
-	return profile
+	return ensureFreeBikeOwnership(profile)
 end
 
 function DataService:Init(remotes)
@@ -804,6 +819,8 @@ function DataService:LoadProfile(player)
 	if ok and type(savedData) == "table" then
 		profile = reconcile(savedData, buildDefaultProfile())
 	end
+
+	profile = ensureFreeBikeOwnership(profile)
 
 	self.Profiles[player] = profile
 	player:SetAttribute("StreetLegalProfileReady", true)
@@ -1213,6 +1230,7 @@ local Workspace = game:GetService("Workspace")
 local Config = require(ReplicatedStorage.Modules.Config)
 local BikeDefinitions = require(ReplicatedStorage.Modules.BikeDefinitions)
 local BikeVisuals = require(ReplicatedStorage.Modules.BikeVisuals)
+local SpawnUtil = require(script.Parent.SpawnUtil)
 
 local PurchaseService = {
 	ActiveBikes = {},
@@ -1386,6 +1404,11 @@ function PurchaseService:GetCatalog(player)
 	end
 
 	table.sort(catalog, function(a, b)
+		if a.UnlockType ~= b.UnlockType then
+			if a.UnlockType == "Free" or b.UnlockType == "Free" then
+				return a.UnlockType == "Free"
+			end
+		end
 		if a.Tier == b.Tier then
 			if a.Price == b.Price then
 				return a.DisplayName < b.DisplayName
@@ -1407,27 +1430,56 @@ function PurchaseService:GetGarageState(player)
 	}
 end
 
-function PurchaseService:GetSpawnCFrame(player)
+function PurchaseService:GetSpawnCFrame(player, bikeId)
+	local visual = BikeVisuals[bikeId] or BikeVisuals.default
+	local geometry = visual.Geometry
+	local groundOffset = math.max(
+		(geometry.FrontWheelRadius or 1.1) - (geometry.FrontAxleY or 0.55),
+		(geometry.RearWheelRadius or 1.1) - (geometry.RearAxleY or 0.55),
+		0.6
+	) + 0.05
+
 	local character = player.Character
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 	if rootPart then
 		local forward = rootPart.CFrame.LookVector
-		return CFrame.new(
-			rootPart.Position + (forward * Config.Gameplay.TeleportSpawnOffset) + Vector3.new(0, Config.Gameplay.BikeRespawnHeight, 0),
-			rootPart.Position + (forward * 60)
-		)
-	end
+		local flatForward = Vector3.new(forward.X, 0, forward.Z)
+		if flatForward.Magnitude < 0.001 then
+			flatForward = Vector3.new(0, 0, -1)
+		else
+			flatForward = flatForward.Unit
+		end
 
-	local spawns = Workspace:FindFirstChild("Spawns")
-	if spawns then
-		for _, descendant in ipairs(spawns:GetDescendants()) do
-			if descendant:IsA("BasePart") and descendant:GetAttribute("SpawnPad") then
-				return descendant.CFrame + Vector3.new(0, Config.Gameplay.BikeRespawnHeight, 0)
-			end
+		local candidatePosition = rootPart.Position + (flatForward * Config.Gameplay.TeleportSpawnOffset)
+		local grounded = SpawnUtil:ResolveGroundCFrame(
+			candidatePosition,
+			flatForward,
+			{ character },
+			Config.Gameplay.BikeRespawnHeight,
+			72,
+			groundOffset
+		)
+		if grounded then
+			return grounded
 		end
 	end
 
-	return CFrame.new(0, 8, 0)
+	local spawnPad = SpawnUtil:ChooseSpawnPad(player)
+	if spawnPad then
+		local grounded = SpawnUtil:ResolveGroundCFrame(
+			spawnPad.Position,
+			spawnPad.CFrame.LookVector,
+			{ spawnPad },
+			16,
+			72,
+			groundOffset
+		)
+		if grounded then
+			return grounded
+		end
+	end
+
+	return CFrame.new(0, groundOffset + 4, 0)
 end
 
 function PurchaseService:SetBikeNetworkOwner(model, player)
@@ -1446,7 +1498,7 @@ function PurchaseService:CreateBikeModel(player, bikeId)
 	local g = visual.Geometry
 	local c = visual.Colors
 	local paint = bike.Paint or c.Primary
-	local spawnCFrame = self:GetSpawnCFrame(player)
+	local spawnCFrame = self:GetSpawnCFrame(player, bikeId)
 
 	local model = Instance.new("Model")
 	model.Name = string.format("%s_%d", bikeId, player.UserId)
@@ -1854,6 +1906,242 @@ return PurchaseService
       </Item>
       <Item class="ModuleScript" referent="15">
         <Properties>
+          <string name="Name">SpawnService</string>
+          <string name="Source"><![CDATA[local Players = game:GetService("Players")
+
+local SpawnUtil = require(script.Parent.SpawnUtil)
+
+local SpawnService = {
+	Initialized = false,
+}
+
+local function zeroAssembly(rootPart)
+	rootPart.AssemblyLinearVelocity = Vector3.zero
+	rootPart.AssemblyAngularVelocity = Vector3.zero
+end
+
+function SpawnService:AssignRespawnLocation(player)
+	if not SpawnUtil:WaitForWorldReady(20) then
+		return
+	end
+
+	local spawnPad = SpawnUtil:ChooseSpawnPad(player)
+	if spawnPad and spawnPad:IsA("SpawnLocation") then
+		player.RespawnLocation = spawnPad
+	end
+end
+
+function SpawnService:PlaceCharacter(player, character)
+	player:SetAttribute("StreetLegalSpawnReady", false)
+
+	if not SpawnUtil:WaitForWorldReady(20) then
+		warn("[StreetLegal] World was not ready in time for", player.Name)
+		player:SetAttribute("StreetLegalSpawnReady", true)
+		return
+	end
+
+	self:AssignRespawnLocation(player)
+
+	local humanoid = character:WaitForChild("Humanoid", 10)
+	local rootPart = character:WaitForChild("HumanoidRootPart", 10)
+	if not humanoid or not rootPart or player.Character ~= character then
+		return
+	end
+
+	local targetCFrame = SpawnUtil:GetCharacterSpawnCFrame(player, character)
+	character:PivotTo(targetCFrame)
+	zeroAssembly(rootPart)
+	humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+
+	task.delay(0.2, function()
+		if player.Character ~= character or not rootPart.Parent then
+			return
+		end
+
+		local grounded = SpawnUtil:RaycastToGround(rootPart.Position, { character }, 6, 20)
+		if not grounded then
+			local retryCFrame = SpawnUtil:GetCharacterSpawnCFrame(player, character)
+			character:PivotTo(retryCFrame)
+			zeroAssembly(rootPart)
+		end
+
+		player:SetAttribute("StreetLegalSpawnReady", true)
+	end)
+end
+
+function SpawnService:BindPlayer(player)
+	player:SetAttribute("StreetLegalSpawnReady", false)
+	task.spawn(function()
+		self:AssignRespawnLocation(player)
+	end)
+
+	player.CharacterAdded:Connect(function(character)
+		task.spawn(function()
+			self:PlaceCharacter(player, character)
+		end)
+	end)
+
+	if player.Character then
+		task.spawn(function()
+			self:PlaceCharacter(player, player.Character)
+		end)
+	end
+end
+
+function SpawnService:Init()
+	if self.Initialized then
+		return
+	end
+
+	self.Initialized = true
+
+	Players.PlayerAdded:Connect(function(player)
+		self:BindPlayer(player)
+	end)
+
+	for _, player in ipairs(Players:GetPlayers()) do
+		self:BindPlayer(player)
+	end
+end
+
+return SpawnService
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="16">
+        <Properties>
+          <string name="Name">SpawnUtil</string>
+          <string name="Source"><![CDATA[local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Modules.Config)
+local SpawnData = require(Workspace.Spawns.SpawnData)
+
+local SpawnUtil = {}
+
+local DEFAULT_LOOK = Vector3.new(0, 0, -1)
+
+local function flattenLookVector(vector)
+	local flat = Vector3.new(vector.X, 0, vector.Z)
+	if flat.Magnitude < 0.001 then
+		return DEFAULT_LOOK
+	end
+	return flat.Unit
+end
+
+function SpawnUtil:WaitForWorldReady(timeoutSeconds)
+	local startedAt = os.clock()
+	while Workspace:GetAttribute("StreetLegalWorldReady") ~= true do
+		if timeoutSeconds and (os.clock() - startedAt) >= timeoutSeconds then
+			return false
+		end
+		task.wait(0.1)
+	end
+	return true
+end
+
+function SpawnUtil:GetSpawnPads()
+	local spawnsFolder = Workspace:FindFirstChild("Spawns")
+	if not spawnsFolder then
+		return {}
+	end
+
+	local pads = {}
+	for _, descendant in ipairs(spawnsFolder:GetDescendants()) do
+		if descendant:IsA("BasePart") and descendant:GetAttribute("SpawnPad") then
+			table.insert(pads, descendant)
+		end
+	end
+
+	table.sort(pads, function(a, b)
+		return a.Name < b.Name
+	end)
+
+	return pads
+end
+
+function SpawnUtil:ChooseSpawnPad(player)
+	local pads = self:GetSpawnPads()
+	if #pads == 0 then
+		return nil
+	end
+
+	local index = ((player and player.UserId or 0) % #pads) + 1
+	return pads[index]
+end
+
+function SpawnUtil:RaycastToGround(position, ignoreInstances, searchHeight, searchDepth)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = ignoreInstances or {}
+	params.IgnoreWater = false
+
+	local height = searchHeight or 72
+	local depth = searchDepth or 180
+	return Workspace:Raycast(
+		position + Vector3.new(0, height, 0),
+		Vector3.new(0, -(height + depth), 0),
+		params
+	)
+end
+
+function SpawnUtil:ResolveGroundCFrame(position, lookVector, ignoreInstances, searchHeight, searchDepth, surfaceOffset)
+	local result = self:RaycastToGround(position, ignoreInstances, searchHeight, searchDepth)
+	if not result then
+		return nil, nil
+	end
+
+	local groundedPosition = Vector3.new(position.X, result.Position.Y + (surfaceOffset or 0), position.Z)
+	local flatLook = flattenLookVector(lookVector or DEFAULT_LOOK)
+	return CFrame.lookAt(groundedPosition, groundedPosition + flatLook, Vector3.yAxis), result
+end
+
+function SpawnUtil:GetFallbackSpawnDefinition(player)
+	if #SpawnData == 0 then
+		return nil
+	end
+
+	local index = ((player and player.UserId or 0) % #SpawnData) + 1
+	return SpawnData[index]
+end
+
+function SpawnUtil:GetCharacterSpawnCFrame(player, character)
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+	local surfaceOffset = ((humanoid and humanoid.HipHeight) or 2) + ((rootPart and rootPart.Size.Y) or 2) * 0.5 + 0.25
+	local ignoreInstances = { character }
+
+	local pad = self:ChooseSpawnPad(player)
+	if pad then
+		local resolved = self:ResolveGroundCFrame(pad.Position, pad.CFrame.LookVector, { character, pad }, 24, 80, surfaceOffset)
+		if resolved then
+			return resolved, pad
+		end
+	end
+
+	local fallback = self:GetFallbackSpawnDefinition(player)
+	if fallback then
+		local fallbackPosition = Vector3.new(fallback.Position.X, Config.World.StreetY, fallback.Position.Z)
+		local resolved = self:ResolveGroundCFrame(fallbackPosition, DEFAULT_LOOK, ignoreInstances, 24, 80, surfaceOffset)
+		if resolved then
+			return resolved, fallback
+		end
+	end
+
+	local stationPosition = Config.World.PoliceStationPosition
+	return CFrame.lookAt(
+		Vector3.new(stationPosition.X, stationPosition.Y + surfaceOffset, stationPosition.Z),
+		Vector3.new(stationPosition.X, stationPosition.Y + surfaceOffset, stationPosition.Z) + DEFAULT_LOOK,
+		Vector3.yAxis
+	), nil
+end
+
+return SpawnUtil
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="17">
+        <Properties>
           <string name="Name">WantedService</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -2198,22 +2486,22 @@ return WantedService
       </Item>
     </Item>
   </Item>
-  <Item class="SoundService" referent="16">
+  <Item class="SoundService" referent="18">
     <Properties>
       <string name="Name">SoundService</string>
       <token name="AmbientReverb">17</token>
       <bool name="RespectFilteringEnabled">true</bool>
     </Properties>
   </Item>
-  <Item class="StarterGui" referent="17">
+  <Item class="StarterGui" referent="19">
     <Properties>
       <string name="Name">StarterGui</string>
     </Properties>
-    <Item class="Folder" referent="18">
+    <Item class="Folder" referent="20">
       <Properties>
         <string name="Name">UI</string>
       </Properties>
-      <Item class="LocalScript" referent="19">
+      <Item class="LocalScript" referent="21">
         <Properties>
           <string name="Name">BikeMenu</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -2221,6 +2509,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Modules.Config)
+local BikeDefinitions = require(ReplicatedStorage.Modules.BikeDefinitions)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -2551,6 +2840,53 @@ local function choosePreferredBike(focusFree)
 	return state.Catalog[1] and state.Catalog[1].Id or nil
 end
 
+local function isBootstrapReady()
+	return ReplicatedStorage:GetAttribute("StreetLegalBootstrapReady") == true
+end
+
+local function isSpawnReady()
+	return player:GetAttribute("StreetLegalSpawnReady") == true
+end
+
+local function buildFallbackCatalog()
+	local catalog = {}
+	for bikeId, bike in pairs(BikeDefinitions) do
+		table.insert(catalog, {
+			Id = bikeId,
+			DisplayName = bike.DisplayName,
+			StyleTag = bike.StyleTag,
+			UnlockType = bike.UnlockType,
+			Price = bike.Price,
+			GamePassId = bike.GamePassId,
+			Tier = bike.Tier,
+			TopSpeedMph = bike.TopSpeedMph,
+			Acceleration = bike.Acceleration,
+			Handling = bike.Handling,
+			Jump = bike.Jump,
+			Durability = bike.Durability,
+			IllegalOnStreet = bike.IllegalOnStreet,
+			Description = bike.Description,
+		})
+	end
+
+	table.sort(catalog, function(a, b)
+		if a.UnlockType ~= b.UnlockType then
+			if a.UnlockType == "Free" or b.UnlockType == "Free" then
+				return a.UnlockType == "Free"
+			end
+		end
+		if a.Tier == b.Tier then
+			if a.Price == b.Price then
+				return a.DisplayName < b.DisplayName
+			end
+			return a.Price < b.Price
+		end
+		return a.Tier < b.Tier
+	end)
+
+	return catalog
+end
+
 local function meter(value)
 	local normalized = math.clamp(math.floor((value * 2.1) + 0.5), 1, 5)
 	return string.rep("■", normalized) .. string.rep("□", 5 - normalized)
@@ -2712,6 +3048,18 @@ local function refreshGarage(forceSelection)
 	if state.Busy then
 		return
 	end
+
+	if not isBootstrapReady() then
+		state.Catalog = buildFallbackCatalog()
+		if forceSelection or not state.SelectedBikeId or not findBike(state.SelectedBikeId) then
+			state.SelectedBikeId = choosePreferredBike(true)
+		end
+		renderCatalog()
+		updateDetails()
+		setMessage("Garage is still loading. Bikes are listed, but spawn actions unlock in a second.", Config.UI.Accent)
+		return
+	end
+
 	state.Busy = true
 	local ok, response = pcall(function()
 		return bikeAction:InvokeServer("GetGarage")
@@ -2719,11 +3067,14 @@ local function refreshGarage(forceSelection)
 	state.Busy = false
 
 	if not ok or not response then
-		setMessage("Garage sync failed.", Config.UI.Danger)
+		state.Catalog = buildFallbackCatalog()
+		renderCatalog()
+		updateDetails()
+		setMessage("Garage sync failed. Retrying when the server finishes booting.", Config.UI.Danger)
 		return
 	end
 
-	state.Catalog = response.Catalog or {}
+	state.Catalog = (#(response.Catalog or {}) > 0) and response.Catalog or buildFallbackCatalog()
 	setSnapshot(response.Snapshot or state.Snapshot)
 	player:SetAttribute("StreetLegalActiveBikeId", response.ActiveBikeId)
 
@@ -2741,6 +3092,10 @@ end
 
 local function invokeAction(action)
 	if state.Busy or not state.SelectedBikeId then
+		return
+	end
+	if not isBootstrapReady() then
+		setMessage("Garage is still loading. Try again in a second.", Config.UI.Danger)
 		return
 	end
 	state.Busy = true
@@ -2850,6 +3205,12 @@ playerGui:GetAttributeChangedSignal("StreetLegalGarageOpen"):Connect(function()
 	end
 end)
 
+ReplicatedStorage:GetAttributeChangedSignal("StreetLegalBootstrapReady"):Connect(function()
+	if isBootstrapReady() then
+		refreshGarage(true)
+	end
+end)
+
 player:GetAttributeChangedSignal("StreetLegalActiveBikeId"):Connect(function()
 	if gui.Enabled then
 		renderCatalog()
@@ -2877,7 +3238,15 @@ local function scheduleFirstSpawnOpen(character)
 	end
 	state.AutoOpenedCharacter = character
 	playerGui:SetAttribute("StreetLegalGarageFocusFree", true)
-	task.delay(0.9, function()
+	task.spawn(function()
+		local startedAt = os.clock()
+		while player.Character == character and (not isSpawnReady() or not isBootstrapReady()) do
+			if os.clock() - startedAt > 12 then
+				break
+			end
+			task.wait(0.1)
+		end
+
 		if player.Character ~= character then
 			return
 		end
@@ -2898,7 +3267,7 @@ setMessage("Garage button is pinned on the HUD. Pick a bike and ride.", Config.U
 ]]></string>
         </Properties>
       </Item>
-      <Item class="LocalScript" referent="20">
+      <Item class="LocalScript" referent="22">
         <Properties>
           <string name="Name">HUD</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -3365,15 +3734,15 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="21">
+  <Item class="StarterPlayer" referent="23">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="22">
+    <Item class="StarterPlayerScripts" referent="24">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="LocalScript" referent="23">
+      <Item class="LocalScript" referent="25">
         <Properties>
           <string name="Name">BikeController</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -3670,7 +4039,7 @@ end)
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="24">
+  <Item class="Workspace" referent="26">
     <Properties>
       <string name="Name">Workspace</string>
       <bool name="FilteringEnabled">true</bool>
@@ -3678,11 +4047,11 @@ end)
       <bool name="NeedsPivotMigration">false</bool>
       <bool name="StreamingEnabled">true</bool>
     </Properties>
-    <Item class="Folder" referent="25">
+    <Item class="Folder" referent="27">
       <Properties>
         <string name="Name">Map</string>
       </Properties>
-      <Item class="Script" referent="26">
+      <Item class="Script" referent="28">
         <Properties>
           <string name="Name">CityBuilder</string>
           <token name="RunContext">0</token>
@@ -3698,6 +4067,8 @@ local mapFolder = script.Parent
 local spawnsFolder = Workspace:WaitForChild("Spawns")
 local policeFolder = Workspace:WaitForChild("Police")
 local rampsFolder = Workspace:WaitForChild("Ramps")
+
+Workspace:SetAttribute("StreetLegalWorldReady", false)
 
 local generated = mapFolder:FindFirstChild("Generated")
 if generated then
@@ -4077,15 +4448,22 @@ end
 
 local function makeSpawnLot(spawnDef)
 	local palette = palettes[spawnDef.District] or palettes.City
-	local lot = makePart(sections.Props, spawnDef.Name .. "Lot", Vector3.new(42, 1, 26), CFrame.new(spawnDef.Position + Vector3.new(0, -0.4, 0)), Color3.fromRGB(52, 54, 58), Enum.Material.Asphalt)
+	local baseCFrame = CFrame.new(spawnDef.Position) * CFrame.Angles(0, math.rad(spawnDef.Heading or 0), 0)
+	local lot = makePart(sections.Props, spawnDef.Name .. "Lot", Vector3.new(42, 0.6, 26), baseCFrame * CFrame.new(0, 0.3, 0), Color3.fromRGB(52, 54, 58), Enum.Material.Asphalt)
 	tagSurface(lot, spawnDef.District, "Street")
-	local awning = makePart(sections.Props, spawnDef.Name .. "Awning", Vector3.new(22, 1, 8), CFrame.new(spawnDef.Position + Vector3.new(0, 8, -10)), palette.Accent, Enum.Material.Metal)
+	local padGlow = makePart(sections.Props, spawnDef.Name .. "PadGlow", Vector3.new(12, 0.16, 12), baseCFrame * CFrame.new(0, 0.69, 0), spawnDef.Color, Enum.Material.Neon, {
+		CanCollide = false,
+		Transparency = 0.18,
+		CastShadow = false,
+	})
+	padGlow:SetAttribute("District", spawnDef.District)
+	local awning = makePart(sections.Props, spawnDef.Name .. "Awning", Vector3.new(22, 0.8, 8), baseCFrame * CFrame.new(0, 5.4, -10), palette.Accent, Enum.Material.Metal)
 	tagNearMiss(awning, spawnDef.District)
-	local backWall = makePart(sections.Props, spawnDef.Name .. "Wall", Vector3.new(22, 12, 1.5), CFrame.new(spawnDef.Position + Vector3.new(0, 6, -14)), Color3.fromRGB(63, 66, 72), Enum.Material.Concrete)
+	local backWall = makePart(sections.Props, spawnDef.Name .. "Wall", Vector3.new(22, 9, 1.5), baseCFrame * CFrame.new(0, 4.5, -14), Color3.fromRGB(63, 66, 72), Enum.Material.Concrete)
 	tagNearMiss(backWall, spawnDef.District)
 	addSurfaceGui(backWall, spawnDef.Name, Color3.fromRGB(245, 245, 245))
 	for offset = -12, 12, 8 do
-		makeLightPole(spawnDef.Position + Vector3.new(offset, 0, 14), spawnDef.District, 13)
+		makeLightPole((baseCFrame * CFrame.new(offset, 0, 14)).Position, spawnDef.District, 13)
 	end
 end
 
@@ -4380,14 +4758,14 @@ for _, spawnDef in ipairs(SpawnData) do
 	makeSpawnLot(spawnDef)
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = spawnDef.Name
-	spawn.Size = Vector3.new(12, 1, 12)
-	spawn.CFrame = CFrame.new(spawnDef.Position)
-	spawn.Transparency = 0.08
+	spawn.Size = Vector3.new(12, 0.2, 12)
+	spawn.CFrame = CFrame.new(spawnDef.Position + Vector3.new(0, 0.72, 0)) * CFrame.Angles(0, math.rad(spawnDef.Heading or 0), 0)
+	spawn.Transparency = 0.82
 	spawn.Color = spawnDef.Color
 	spawn.Material = Enum.Material.Neon
 	spawn.Anchored = true
 	spawn.Neutral = true
-	spawn.CanCollide = true
+	spawn.CanCollide = false
 	spawn.Enabled = true
 	spawn:SetAttribute("SpawnPad", true)
 	spawn:SetAttribute("District", spawnDef.District)
@@ -4509,11 +4887,11 @@ Workspace:SetAttribute("StreetLegalWorldReady", true)
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="27">
+    <Item class="Folder" referent="29">
       <Properties>
         <string name="Name">Police</string>
       </Properties>
-      <Item class="Script" referent="28">
+      <Item class="Script" referent="30">
         <Properties>
           <string name="Name">NPCController</string>
           <token name="RunContext">0</token>
@@ -4532,11 +4910,11 @@ PoliceService:Init(script.Parent)
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="29">
+    <Item class="Folder" referent="31">
       <Properties>
         <string name="Name">Ramps</string>
       </Properties>
-      <Item class="ModuleScript" referent="30">
+      <Item class="ModuleScript" referent="32">
         <Properties>
           <string name="Name">ObstacleCatalog</string>
           <string name="Source"><![CDATA[return {
@@ -4555,18 +4933,18 @@ PoliceService:Init(script.Parent)
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="31">
+    <Item class="Folder" referent="33">
       <Properties>
         <string name="Name">Spawns</string>
       </Properties>
-      <Item class="ModuleScript" referent="32">
+      <Item class="ModuleScript" referent="34">
         <Properties>
           <string name="Name">SpawnData</string>
           <string name="Source"><![CDATA[return {
-	{ Name = "Redline Garage", District = "RedlineRow", Position = Vector3.new(-620, 3, -120), Color = Color3.fromRGB(215, 70, 70) },
-	{ Name = "Penn Market Lot", District = "PennMarket", Position = Vector3.new(-40, 3, 190), Color = Color3.fromRGB(255, 170, 60) },
-	{ Name = "Harbor Yard", District = "IronHarbor", Position = Vector3.new(520, 3, 420), Color = Color3.fromRGB(59, 138, 230) },
-	{ Name = "Quarry Trailhead", District = "QuarryRun", Position = Vector3.new(-760, 3, 580), Color = Color3.fromRGB(112, 90, 60) },
+	{ Name = "Redline Garage", District = "RedlineRow", Position = Vector3.new(-780, 0, -120), Heading = 180, Color = Color3.fromRGB(215, 70, 70) },
+	{ Name = "Penn Market Lot", District = "PennMarket", Position = Vector3.new(180, 0, 300), Heading = 180, Color = Color3.fromRGB(255, 170, 60) },
+	{ Name = "Harbor Yard", District = "IronHarbor", Position = Vector3.new(660, 0, 540), Heading = 180, Color = Color3.fromRGB(59, 138, 230) },
+	{ Name = "Quarry Trailhead", District = "QuarryRun", Position = Vector3.new(-780, 0, 660), Heading = 180, Color = Color3.fromRGB(112, 90, 60) },
 }
 ]]></string>
         </Properties>

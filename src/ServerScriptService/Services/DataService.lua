@@ -35,6 +35,34 @@ local function reconcile(target, defaults)
 	return target
 end
 
+local function ensureFreeBikeOwnership(profile)
+	if type(profile.OwnedBikes) ~= "table" then
+		profile.OwnedBikes = {}
+	end
+
+	for bikeId, bike in pairs(BikeDefinitions) do
+		if bike.UnlockType == "Free" then
+			profile.OwnedBikes[bikeId] = true
+		end
+	end
+
+	if not profile.OwnedBikes[profile.EquippedBikeId] then
+		profile.EquippedBikeId = nil
+		for bikeId, owned in pairs(profile.OwnedBikes) do
+			if owned then
+				profile.EquippedBikeId = bikeId
+				break
+			end
+		end
+	end
+
+	if not profile.EquippedBikeId then
+		profile.EquippedBikeId = Config.Economy.StarterBikeId
+	end
+
+	return profile
+end
+
 local function buildDefaultProfile()
 	local profile = {
 		Cash = Config.Economy.StarterCash,
@@ -48,22 +76,7 @@ local function buildDefaultProfile()
 		},
 	}
 
-	for bikeId, bike in pairs(BikeDefinitions) do
-		if bike.UnlockType == "Free" then
-			profile.OwnedBikes[bikeId] = true
-		end
-	end
-
-	if not profile.OwnedBikes[profile.EquippedBikeId] then
-		for bikeId, owned in pairs(profile.OwnedBikes) do
-			if owned then
-				profile.EquippedBikeId = bikeId
-				break
-			end
-		end
-	end
-
-	return profile
+	return ensureFreeBikeOwnership(profile)
 end
 
 function DataService:Init(remotes)
@@ -139,6 +152,8 @@ function DataService:LoadProfile(player)
 	if ok and type(savedData) == "table" then
 		profile = reconcile(savedData, buildDefaultProfile())
 	end
+
+	profile = ensureFreeBikeOwnership(profile)
 
 	self.Profiles[player] = profile
 	player:SetAttribute("StreetLegalProfileReady", true)

@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Modules.Config)
+local BikeDefinitions = require(ReplicatedStorage.Modules.BikeDefinitions)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -333,6 +334,53 @@ local function choosePreferredBike(focusFree)
 	return state.Catalog[1] and state.Catalog[1].Id or nil
 end
 
+local function isBootstrapReady()
+	return ReplicatedStorage:GetAttribute("StreetLegalBootstrapReady") == true
+end
+
+local function isSpawnReady()
+	return player:GetAttribute("StreetLegalSpawnReady") == true
+end
+
+local function buildFallbackCatalog()
+	local catalog = {}
+	for bikeId, bike in pairs(BikeDefinitions) do
+		table.insert(catalog, {
+			Id = bikeId,
+			DisplayName = bike.DisplayName,
+			StyleTag = bike.StyleTag,
+			UnlockType = bike.UnlockType,
+			Price = bike.Price,
+			GamePassId = bike.GamePassId,
+			Tier = bike.Tier,
+			TopSpeedMph = bike.TopSpeedMph,
+			Acceleration = bike.Acceleration,
+			Handling = bike.Handling,
+			Jump = bike.Jump,
+			Durability = bike.Durability,
+			IllegalOnStreet = bike.IllegalOnStreet,
+			Description = bike.Description,
+		})
+	end
+
+	table.sort(catalog, function(a, b)
+		if a.UnlockType ~= b.UnlockType then
+			if a.UnlockType == "Free" or b.UnlockType == "Free" then
+				return a.UnlockType == "Free"
+			end
+		end
+		if a.Tier == b.Tier then
+			if a.Price == b.Price then
+				return a.DisplayName < b.DisplayName
+			end
+			return a.Price < b.Price
+		end
+		return a.Tier < b.Tier
+	end)
+
+	return catalog
+end
+
 local function meter(value)
 	local normalized = math.clamp(math.floor((value * 2.1) + 0.5), 1, 5)
 	return string.rep("■", normalized) .. string.rep("□", 5 - normalized)
@@ -494,6 +542,18 @@ local function refreshGarage(forceSelection)
 	if state.Busy then
 		return
 	end
+
+	if not isBootstrapReady() then
+		state.Catalog = buildFallbackCatalog()
+		if forceSelection or not state.SelectedBikeId or not findBike(state.SelectedBikeId) then
+			state.SelectedBikeId = choosePreferredBike(true)
+		end
+		renderCatalog()
+		updateDetails()
+		setMessage("Garage is still loading. Bikes are listed, but spawn actions unlock in a second.", Config.UI.Accent)
+		return
+	end
+
 	state.Busy = true
 	local ok, response = pcall(function()
 		return bikeAction:InvokeServer("GetGarage")
@@ -501,11 +561,14 @@ local function refreshGarage(forceSelection)
 	state.Busy = false
 
 	if not ok or not response then
-		setMessage("Garage sync failed.", Config.UI.Danger)
+		state.Catalog = buildFallbackCatalog()
+		renderCatalog()
+		updateDetails()
+		setMessage("Garage sync failed. Retrying when the server finishes booting.", Config.UI.Danger)
 		return
 	end
 
-	state.Catalog = response.Catalog or {}
+	state.Catalog = (#(response.Catalog or {}) > 0) and response.Catalog or buildFallbackCatalog()
 	setSnapshot(response.Snapshot or state.Snapshot)
 	player:SetAttribute("StreetLegalActiveBikeId", response.ActiveBikeId)
 
@@ -523,6 +586,10 @@ end
 
 local function invokeAction(action)
 	if state.Busy or not state.SelectedBikeId then
+		return
+	end
+	if not isBootstrapReady() then
+		setMessage("Garage is still loading. Try again in a second.", Config.UI.Danger)
 		return
 	end
 	state.Busy = true
@@ -632,6 +699,12 @@ playerGui:GetAttributeChangedSignal("StreetLegalGarageOpen"):Connect(function()
 	end
 end)
 
+ReplicatedStorage:GetAttributeChangedSignal("StreetLegalBootstrapReady"):Connect(function()
+	if isBootstrapReady() then
+		refreshGarage(true)
+	end
+end)
+
 player:GetAttributeChangedSignal("StreetLegalActiveBikeId"):Connect(function()
 	if gui.Enabled then
 		renderCatalog()
@@ -659,7 +732,15 @@ local function scheduleFirstSpawnOpen(character)
 	end
 	state.AutoOpenedCharacter = character
 	playerGui:SetAttribute("StreetLegalGarageFocusFree", true)
-	task.delay(0.9, function()
+	task.spawn(function()
+		local startedAt = os.clock()
+		while player.Character == character and (not isSpawnReady() or not isBootstrapReady()) do
+			if os.clock() - startedAt > 12 then
+				break
+			end
+			task.wait(0.1)
+		end
+
 		if player.Character ~= character then
 			return
 		end
