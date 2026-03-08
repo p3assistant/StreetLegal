@@ -5,6 +5,7 @@ local Workspace = game:GetService("Workspace")
 local Config = require(ReplicatedStorage.Modules.Config)
 local BikeDefinitions = require(ReplicatedStorage.Modules.BikeDefinitions)
 local WantedConfig = require(ReplicatedStorage.Modules.WantedConfig)
+local SpawnUtil = require(script.Parent.SpawnUtil)
 
 local WantedService = {
 	States = {},
@@ -278,7 +279,8 @@ function WantedService:ArrestPlayer(player, arrestingOfficer)
 
 	local character = player.Character
 	if character then
-		character:PivotTo(CFrame.new(Config.World.PoliceStationPosition))
+		local stationSpawnCFrame = SpawnUtil:GetPoliceStationSpawnCFrame(character)
+		character:PivotTo(stationSpawnCFrame)
 	end
 
 	if self.Remotes and self.Remotes.PoliceState then
