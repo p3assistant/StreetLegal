@@ -6,5 +6,6 @@
 *.DS_Store
 sourcemap.json
 *.toml.bak
-build/
+build/*
 !build/.gitkeep
+!build/StreetLegal.rbxlx
