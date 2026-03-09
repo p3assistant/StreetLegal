@@ -95,7 +95,7 @@ local Config = {
 		},
 		StreetY = 0,
 		WaterLevel = -8,
-		PoliceStationPosition = Vector3.new(315, 8, -45),
+		PoliceStationPosition = Vector3.new(315, 8, -110),
 		DistrictColors = {
 			PennMarket = Color3.fromRGB(74, 74, 78),
 			RedlineRow = Color3.fromRGB(122, 69, 53),
