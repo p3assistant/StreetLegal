@@ -110,6 +110,26 @@ local function getActiveBikeFromSeat(humanoid)
 	return model
 end
 
+local function isMountedOnOwnedBike()
+	if not controller.Humanoid or not controller.Humanoid.Parent then
+		return false
+	end
+
+	return getActiveBikeFromSeat(controller.Humanoid) ~= nil
+end
+
+local function shouldHandleGameplayInput(gameProcessed)
+	if UserInputService:GetFocusedTextBox() then
+		return false
+	end
+
+	if not gameProcessed then
+		return true
+	end
+
+	return isMountedOnOwnedBike()
+end
+
 local function scanForNearMiss(controllerState)
 	if not controllerState.Hull then
 		return
@@ -230,7 +250,7 @@ local function tryStartWheelie(controllerState, grounded, throttle, look, topSpe
 	controllerState.LastWheelieTapAt = nowStamp
 	controllerState.Speed = math.min(topSpeed, controllerState.Speed + (wheelieConfig.PopSpeedBoostMph * Config.Bike.MphToStuds))
 
-	local impulsePosition = controllerState.Hull.Position - (look * (controllerState.Hull.Size.Z * 0.28))
+	local impulsePosition = controllerState.Hull.Position + (look * (controllerState.Hull.Size.Z * 0.28))
 	controllerState.Hull:ApplyImpulseAtPosition(
 		Vector3.new(0, controllerState.Hull.AssemblyMass * wheelieConfig.PopImpulse, 0),
 		impulsePosition
@@ -358,7 +378,7 @@ local function updateBikePhysics(controllerState, dt)
 	if controllerState.Align then
 		controllerState.Align.CFrame = CFrame.new(hull.Position)
 			* CFrame.Angles(0, controllerState.Yaw, 0)
-			* CFrame.Angles(math.rad(-controllerState.WheeliePitch), 0, 0)
+			* CFrame.Angles(math.rad(controllerState.WheeliePitch), 0, 0)
 	end
 
 	if controllerState.HopQueued and grounded and nowStamp >= controllerState.NextHopAt then
@@ -402,7 +422,7 @@ local function updateBikePhysics(controllerState, dt)
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then
+	if not shouldHandleGameplayInput(gameProcessed) then
 		return
 	end
 

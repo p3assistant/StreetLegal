@@ -1,3 +1,10 @@
+Update Addendum — 2026-03-09 Wheelie Hotfix
+
+- Fixed the wheelie failure in live gameplay.
+- Root causes were corrected in the bike controller: Roblox-mounted `Ctrl`/`W` inputs are now accepted even when seat controls mark them as processed, and the wheelie pitch/impulse were flipped so the front end now rotates upward instead of being driven nose-down.
+- Final control behavior stays the same in spirit: tap `Ctrl`, then tap `W` to pop the wheelie; tap `W` again while the front is up to keep working the balance point.
+- Chat/text focus still blocks those keys intentionally so typing in UI does not trigger stunts.
+
 Update Addendum — 2026-03-08 Stronger Environment + UX + Bike Pass
 
 - First spawn auto-opens the garage and focuses free starter bikes.
