@@ -68,7 +68,7 @@ Open `build/StreetLegal.rbxlx` in Roblox Studio.
 - Use the pinned HUD `Spawn Bike` / `Garage` button any time; `M` still toggles the garage if you want a keyboard shortcut.
 - If you are on foot with no active bike, the HUD and center callout explicitly tell you to spawn one.
 - Garage flow is built around obvious `Equip & Spawn`, `Spawn Selected`, `Respawn Selected`, and `Store Bike` actions.
-- Controls: `W/S` throttle + brake, `A/D` steer, `R` respawn bike, `Q` hop, `Ctrl` then `W` pops a wheelie, and repeated `W` taps while the front is up keep the bike on the balance point. (This is handled while mounted even if Roblox's seat bindings consume the keypress; chat/text focus still blocks it on purpose.)
+- Controls: `W/S` throttle + brake, `A/D` steer, `R` respawn bike, `Q` hop, and wheelies are now robust in both natural keyboard flows: tap `Ctrl` then `W` to pop it, or keep `W` held while moving and tap `Ctrl`; repeated `W` taps while the front is up still work the balance point. If you arm it a little early from a slower roll, the request stays alive long enough to fire once speed is there. (This is handled while mounted even if Roblox's seat bindings consume the keypress; chat/text focus still blocks it on purpose.)
 - Traversal pass flattens roads, sidewalks, plazas, promenade/boardwalk space, and quarry/park ride surfaces to a common rideable height so bikes stop snagging on curb lips and decorative micro-ledges.
 - The world now includes stronger district art direction: rowhouse blocks, market towers/plaza, park dressing, harbor warehouses/cranes, canal promenade/boardwalk, and quarry berms.
 - Lighting/atmosphere are configured at runtime for a more deliberate late-afternoon look.

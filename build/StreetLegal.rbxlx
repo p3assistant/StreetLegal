@@ -477,7 +477,7 @@ local Config = {
 	Experience = {
 		Name = "Street Legal",
 		Version = "0.4.1",
-		Build = "wheelie-hotfix",
+		Build = "wheelie-hardfix",
 	},
 	Gameplay = {
 		DataStoreName = "StreetLegal_PlayerData_v1",
@@ -526,23 +526,24 @@ local Config = {
 			StepLiftImpulse = 16,
 		},
 		Wheelie = {
-			ArmWindow = 0.85,
-			TriggerWindow = 0.22,
+			ArmWindow = 1.25,
+			RequestWindow = 1.4,
 			Cooldown = 0.35,
-			MinSpeedMph = 10,
-			SustainSpeedMph = 7,
-			PopAngle = 15,
-			SustainAngle = 8,
-			MaxAngle = 22,
-			BalanceTapAngle = 2.8,
-			TapGrace = 0.3,
-			DecayRate = 13,
+			MinSpeedMph = 9,
+			SustainSpeedMph = 6,
+			PopAngle = 18,
+			SustainAngle = 9,
+			MaxAngle = 24,
+			BalanceTapAngle = 3.2,
+			TapGrace = 0.36,
+			DecayRate = 11,
 			ExitRate = 24,
-			RiseRate = 8,
-			FallRate = 10,
-			PopImpulse = 20,
-			PopSpeedBoostMph = 3,
-			TapBoostMph = 1.2,
+			RiseRate = 10,
+			FallRate = 9,
+			PopImpulse = 26,
+			PopSpeedBoostMph = 4,
+			TapBoostMph = 1.4,
+			TraversalAssistSuppressAngle = 4,
 		},
 		Stability = {
 			Responsiveness = 30,
@@ -4500,12 +4501,13 @@ local controller = {
 	Grounded = false,
 	GroundNormal = Vector3.yAxis,
 	WheelieArmedUntil = 0,
-	WheelieTriggerUntil = 0,
+	WheelieQueuedUntil = 0,
 	WheelieCooldownUntil = 0,
 	WheelieActive = false,
 	WheeliePitch = 0,
 	WheelieTargetPitch = 0,
 	LastWheelieTapAt = 0,
+	ThrottleHeld = false,
 }
 
 local function clearHudState()
@@ -4540,12 +4542,13 @@ end
 
 local function resetWheelie(controllerState)
 	controllerState.WheelieArmedUntil = 0
-	controllerState.WheelieTriggerUntil = 0
+	controllerState.WheelieQueuedUntil = 0
 	controllerState.WheelieCooldownUntil = 0
 	controllerState.WheelieActive = false
 	controllerState.WheeliePitch = 0
 	controllerState.WheelieTargetPitch = 0
 	controllerState.LastWheelieTapAt = 0
+	controllerState.ThrottleHeld = false
 end
 
 local function getGroundInfo(origin, ignore)
@@ -4672,6 +4675,10 @@ local function applyTraversalAssist(controllerState, groundResult, look, dt)
 		return
 	end
 
+	if controllerState.WheelieActive and math.max(controllerState.WheeliePitch, controllerState.WheelieTargetPitch) >= Config.Bike.Wheelie.TraversalAssistSuppressAngle then
+		return
+	end
+
 	local frontOrigin = hull.Position + (look * rideAssist.FrontProbeDistance)
 	local frontResult = Workspace:Raycast(frontOrigin + Vector3.new(0, 2.5, 0), Vector3.new(0, -Config.Bike.GroundRayLength, 0), params)
 	if not frontResult then
@@ -4697,10 +4704,40 @@ local function boostWheelie(controllerState, amount)
 	controllerState.LastWheelieTapAt = currentTime()
 end
 
+local function hasForwardIntent(controllerState, throttle)
+	if UserInputService:GetFocusedTextBox() then
+		return false
+	end
+
+	local seatThrottle = throttle
+	if seatThrottle == nil and controllerState.Seat then
+		seatThrottle = controllerState.Seat.ThrottleFloat
+	end
+
+	if seatThrottle and seatThrottle > 0 then
+		return true
+	end
+
+	return controllerState.ThrottleHeld
+end
+
+local function queueWheelieRequest(controllerState, nowStamp)
+	local wheelieConfig = Config.Bike.Wheelie
+	local requestUntil = math.max(controllerState.WheelieArmedUntil, nowStamp + wheelieConfig.RequestWindow)
+	controllerState.WheelieQueuedUntil = math.max(controllerState.WheelieQueuedUntil, requestUntil)
+end
+
 local function tryStartWheelie(controllerState, grounded, throttle, look, topSpeed)
 	local nowStamp = currentTime()
 	local wheelieConfig = Config.Bike.Wheelie
-	if controllerState.WheelieTriggerUntil <= 0 or nowStamp > controllerState.WheelieTriggerUntil then
+
+	if controllerState.WheelieArmedUntil > 0 and nowStamp > controllerState.WheelieArmedUntil then
+		controllerState.WheelieArmedUntil = 0
+	end
+	if controllerState.WheelieQueuedUntil > 0 and nowStamp > controllerState.WheelieQueuedUntil then
+		controllerState.WheelieQueuedUntil = 0
+	end
+	if controllerState.WheelieQueuedUntil <= 0 then
 		return
 	end
 	if nowStamp < controllerState.WheelieCooldownUntil then
@@ -4708,11 +4745,11 @@ local function tryStartWheelie(controllerState, grounded, throttle, look, topSpe
 	end
 
 	local speedMph = math.max(0, controllerState.Speed) / Config.Bike.MphToStuds
-	if not grounded or throttle <= 0 or speedMph < wheelieConfig.MinSpeedMph or not controllerState.Hull then
+	if not grounded or throttle < 0 or speedMph < wheelieConfig.MinSpeedMph or not controllerState.Hull or not hasForwardIntent(controllerState, throttle) then
 		return
 	end
 
-	controllerState.WheelieTriggerUntil = 0
+	controllerState.WheelieQueuedUntil = 0
 	controllerState.WheelieArmedUntil = 0
 	controllerState.WheelieCooldownUntil = nowStamp + wheelieConfig.Cooldown
 	controllerState.WheelieActive = true
@@ -4729,6 +4766,7 @@ end
 
 local function updateWheelie(controllerState, grounded, throttle, look, topSpeed, dt)
 	local wheelieConfig = Config.Bike.Wheelie
+	local forwardIntent = hasForwardIntent(controllerState, throttle)
 	tryStartWheelie(controllerState, grounded, throttle, look, topSpeed)
 
 	local speedMph = math.max(0, controllerState.Speed) / Config.Bike.MphToStuds
@@ -4736,7 +4774,7 @@ local function updateWheelie(controllerState, grounded, throttle, look, topSpeed
 		if speedMph < wheelieConfig.SustainSpeedMph or throttle < 0 then
 			controllerState.WheelieTargetPitch = math.max(0, controllerState.WheelieTargetPitch - (wheelieConfig.ExitRate * dt))
 		else
-			local minTarget = throttle > 0 and wheelieConfig.SustainAngle or 0
+			local minTarget = forwardIntent and wheelieConfig.SustainAngle or 0
 			if currentTime() - controllerState.LastWheelieTapAt > wheelieConfig.TapGrace then
 				controllerState.WheelieTargetPitch = math.max(minTarget, controllerState.WheelieTargetPitch - (wheelieConfig.DecayRate * dt))
 			else
@@ -4899,19 +4937,31 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if input.KeyCode == Enum.KeyCode.Q then
 		controller.HopQueued = true
 	elseif input.KeyCode == Enum.KeyCode.LeftControl or input.KeyCode == Enum.KeyCode.RightControl then
-		controller.WheelieArmedUntil = currentTime() + Config.Bike.Wheelie.ArmWindow
+		local nowStamp = currentTime()
+		controller.WheelieArmedUntil = nowStamp + Config.Bike.Wheelie.ArmWindow
+		if controller.BikeModel and controller.BikeDef and hasForwardIntent(controller) then
+			queueWheelieRequest(controller, nowStamp)
+		end
 	elseif input.KeyCode == Enum.KeyCode.W then
+		controller.ThrottleHeld = true
 		local nowStamp = currentTime()
 		if controller.BikeModel and controller.BikeDef then
 			if controller.WheelieActive then
 				boostWheelie(controller, Config.Bike.Wheelie.BalanceTapAngle)
 				controller.Speed = math.min(controller.BikeDef.TopSpeedStuds, controller.Speed + (Config.Bike.Wheelie.TapBoostMph * Config.Bike.MphToStuds))
 			elseif nowStamp <= controller.WheelieArmedUntil then
-				controller.WheelieTriggerUntil = nowStamp + Config.Bike.Wheelie.TriggerWindow
-				controller.LastWheelieTapAt = nowStamp
+				queueWheelieRequest(controller, nowStamp)
 			end
 		end
 	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.KeyCode ~= Enum.KeyCode.W then
+		return
+	end
+
+	controller.ThrottleHeld = false
 end)
 
 player.CharacterAdded:Connect(function(character)

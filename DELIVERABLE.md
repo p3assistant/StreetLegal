@@ -1,8 +1,11 @@
-Update Addendum — 2026-03-09 Wheelie Hotfix
+Update Addendum — 2026-03-09 Wheelie Hard Fix
 
-- Fixed the wheelie failure in live gameplay.
-- Root causes were corrected in the bike controller: Roblox-mounted `Ctrl`/`W` inputs are now accepted even when seat controls mark them as processed, and the wheelie pitch/impulse were flipped so the front end now rotates upward instead of being driven nose-down.
-- Final control behavior stays the same in spirit: tap `Ctrl`, then tap `W` to pop the wheelie; tap `W` again while the front is up to keep working the balance point.
+- Reworked the wheelie controller into an armed + queued request flow instead of a tiny post-`W` trigger window.
+- Root causes after the first hotfix were bigger than input processing: the old state machine still silently died if `W` was already being held when `Ctrl` was tapped, or if the bike had not quite reached minimum speed inside the old micro-window.
+- Wheelies now support both real player flows: tap `Ctrl` then `W`, or ride with `W` already held and tap `Ctrl`.
+- If `Ctrl` is armed slightly early from a slower roll, the request now stays queued long enough to auto-fire once forward throttle, ground contact, and minimum speed all line up.
+- Active wheelies also suppress the forward step-climb assist once the front is meaningfully up, so traversal help is less likely to fight the stunt.
+- The physical pop and visual pitch were both retuned upward so the wheelie reads clearly once it triggers.
 - Chat/text focus still blocks those keys intentionally so typing in UI does not trigger stunts.
 
 Update Addendum — 2026-03-08 Stronger Environment + UX + Bike Pass
