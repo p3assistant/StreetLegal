@@ -75,6 +75,9 @@ Open `build/StreetLegal.rbxlx` in Roblox Studio.
 - HUD shows speed, heat, district, combo, and the no-bike prompt state.
 - Police will patrol automatically after the world is ready.
 - In Studio, DataStore calls can fail if the place is unpublished or API services are disabled; the game falls back to session-only defaults.
+- Live profiles now autosave on an interval during play instead of waiting only for disconnect / shutdown.
+- Runtime bike maintenance now auto-recovers bikes that leave the playable area, get stranded too far from the rider, or outlive a reset/death flow.
+- Server stunt and near-miss rewards now require a real mounted bike context and enforce server-side cooldowns/caps instead of trusting raw client spam.
 
 ## Tuning
 

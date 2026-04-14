@@ -421,7 +421,8 @@ local function updateDetails()
 	local owned = ownsBike(bike.Id)
 	local equipped = state.Snapshot.EquippedBikeId == bike.Id
 	local active = activeBikeId == bike.Id
-	local unlockText = bike.UnlockType == "Cash" and ("$" .. tostring(bike.Price)) or (bike.UnlockType == "Gamepass" and "Game Pass" or "Free Starter")
+	local comingSoon = bike.UnlockType == "Gamepass" and (bike.GamePassId or 0) == 0
+	local unlockText = bike.UnlockType == "Cash" and ("$" .. tostring(bike.Price)) or (bike.UnlockType == "Gamepass" and (comingSoon and "Coming Soon" or "Game Pass") or "Free Starter")
 	local ownershipLabel = owned and (active and "ACTIVE" or (equipped and "EQUIPPED" or "OWNED")) or "LOCKED"
 
 	bikeName.Text = bike.DisplayName
@@ -448,12 +449,14 @@ local function updateDetails()
 		end
 		updateButton(secondaryButton, not equipped, equipped and "Equipped" or "Equip Only", Config.UI.Accent)
 	else
-		if bike.UnlockType == "Free" then
+		if comingSoon then
+			updateButton(primaryButton, false, "Coming Soon", Color3.fromRGB(92, 98, 108))
+		elseif bike.UnlockType == "Free" then
 			updateButton(primaryButton, true, "Claim & Spawn", Config.UI.Success)
 		else
 			updateButton(primaryButton, true, bike.UnlockType == "Cash" and ("Buy $" .. tostring(bike.Price)) or "Unlock", Config.UI.Primary)
 		end
-		updateButton(secondaryButton, false, bike.UnlockType == "Free" and "Free Starter" or "Owned Required", Config.UI.Accent)
+		updateButton(secondaryButton, false, comingSoon and "Unavailable" or (bike.UnlockType == "Free" and "Free Starter" or "Owned Required"), Config.UI.Accent)
 	end
 
 	updateButton(storeButton, activeBikeId ~= nil, active and "Store Active Bike" or (activeBikeId and "Store Current Bike" or "No Bike Out"), Color3.fromRGB(134, 157, 181))
@@ -481,7 +484,8 @@ local function renderCatalog()
 	for index, bike in ipairs(state.Catalog) do
 		local owned = ownsBike(bike.Id)
 		local active = getActiveBikeId() == bike.Id
-		local unlockText = bike.UnlockType == "Cash" and ("$" .. tostring(bike.Price)) or (bike.UnlockType == "Gamepass" and "GAME PASS" or "FREE STARTER")
+		local comingSoon = bike.UnlockType == "Gamepass" and (bike.GamePassId or 0) == 0
+		local unlockText = bike.UnlockType == "Cash" and ("$" .. tostring(bike.Price)) or (bike.UnlockType == "Gamepass" and (comingSoon and "COMING SOON" or "GAME PASS") or "FREE STARTER")
 		local row = Instance.new("TextButton")
 		row.Name = bike.Id
 		row.Size = UDim2.new(1, -4, 0, 76)

@@ -10,12 +10,23 @@ local SpawnUtil = require(script.Parent.SpawnUtil)
 
 local PurchaseService = {
 	ActiveBikes = {},
+	ActionStamps = {},
 	RuntimeFolder = nil,
 	BikesFolder = nil,
 	DataService = nil,
 	WantedService = nil,
 	Remotes = nil,
 	Initialized = false,
+}
+
+local ACTION_COOLDOWNS = {
+	BuyBike = 0.75,
+	DespawnBike = 0.35,
+	EquipAndSpawnBike = 0.6,
+	EquipBike = 0.25,
+	RespawnBike = 0.6,
+	SpawnBike = 0.6,
+	StoreBike = 0.35,
 }
 
 local function now()
@@ -122,6 +133,115 @@ local function setPlayerBikeAttributes(player, activeBikeId)
 	player:SetAttribute("StreetLegalMounted", false)
 end
 
+local function getCharacterRootPart(player)
+	local character = player and player.Character
+	return character and character:FindFirstChild("HumanoidRootPart") or nil
+end
+
+local function isWithinWorldBounds(position)
+	local minBounds = Config.World.Bounds.Min
+	local maxBounds = Config.World.Bounds.Max
+	local padding = 120
+	return position.X >= (minBounds.X - padding)
+		and position.X <= (maxBounds.X + padding)
+		and position.Z >= (minBounds.Z - padding)
+		and position.Z <= (maxBounds.Z + padding)
+		and position.Y >= (minBounds.Y - 80)
+		and position.Y <= (maxBounds.Y + padding)
+end
+
+function PurchaseService:NotifyPlayer(player, notificationType, text)
+	if self.Remotes and self.Remotes.Notification and player and player.Parent and text ~= "" then
+		self.Remotes.Notification:FireClient(player, {
+			Type = notificationType or "success",
+			Text = text,
+		})
+	end
+end
+
+function PurchaseService:CanProcessAction(player, action)
+	local cooldown = ACTION_COOLDOWNS[action]
+	if not cooldown then
+		return true
+	end
+
+	local stamp = now()
+	local playerStamps = self.ActionStamps[player]
+	if not playerStamps then
+		playerStamps = {}
+		self.ActionStamps[player] = playerStamps
+	end
+
+	local lastAt = playerStamps[action] or 0
+	if stamp - lastAt < cooldown then
+		return false
+	end
+
+	playerStamps[action] = stamp
+	return true
+end
+
+function PurchaseService:ReconcileActiveBike(player, model)
+	if not player or not player.Parent then
+		self.ActiveBikes[player] = nil
+		self.ActionStamps[player] = nil
+		return
+	end
+
+	if not model or not model.Parent then
+		self.ActiveBikes[player] = nil
+		setPlayerBikeAttributes(player, nil)
+		return
+	end
+
+	local primaryPart = model.PrimaryPart
+	if not primaryPart then
+		self:DespawnBike(player)
+		self:NotifyPlayer(player, "danger", "Bike recovered after losing its runtime state.")
+		return
+	end
+
+	local seat = model:FindFirstChild("Seat")
+	local occupant = seat and seat:IsA("VehicleSeat") and seat.Occupant or nil
+	local character = player.Character
+	local rootPart = getCharacterRootPart(player)
+
+	if occupant and (not character or occupant.Parent ~= character) then
+		occupant.Sit = false
+		occupant = nil
+	end
+
+	player:SetAttribute("StreetLegalMounted", occupant ~= nil)
+
+	if not isWithinWorldBounds(primaryPart.Position) then
+		self:DespawnBike(player)
+		self:NotifyPlayer(player, "danger", "Bike recovered after leaving the playable area.")
+		return
+	end
+
+	if rootPart and not occupant then
+		local distanceFromPlayer = (primaryPart.Position - rootPart.Position).Magnitude
+		if distanceFromPlayer > Config.Gameplay.MaxBikeDistanceFromPlayer then
+			self:DespawnBike(player)
+			self:NotifyPlayer(player, "danger", "Bike stored because it got too far away.")
+			return
+		end
+	end
+
+	if (not character or not rootPart) and not occupant then
+		self:DespawnBike(player)
+		return
+	end
+
+	player:SetAttribute("StreetLegalActiveBikeId", model:GetAttribute("BikeId"))
+end
+
+function PurchaseService:RunMaintenance()
+	for player, model in pairs(self.ActiveBikes) do
+		self:ReconcileActiveBike(player, model)
+	end
+end
+
 function PurchaseService:Init(dataService, wantedService, remotes)
 	if self.Initialized then
 		return
@@ -158,6 +278,7 @@ function PurchaseService:Init(dataService, wantedService, remotes)
 	end)
 
 	local function initializePlayer(player)
+		self.ActionStamps[player] = {}
 		setPlayerBikeAttributes(player, nil)
 	end
 
@@ -168,6 +289,14 @@ function PurchaseService:Init(dataService, wantedService, remotes)
 
 	Players.PlayerRemoving:Connect(function(player)
 		self:DespawnBike(player)
+		self.ActionStamps[player] = nil
+	end)
+
+	task.spawn(function()
+		while self.Initialized do
+			self:RunMaintenance()
+			task.wait(1)
+		end
 	end)
 end
 
@@ -548,13 +677,26 @@ function PurchaseService:SpawnBike(player, bikeId)
 		return { Success = false, Message = "Bike not owned." }
 	end
 
+	if Workspace:GetAttribute("StreetLegalWorldReady") ~= true then
+		return { Success = false, Message = "World is still loading." }
+	end
+
+	local character = player.Character
+	local rootPart = getCharacterRootPart(player)
+	if not character or not rootPart then
+		return { Success = false, Message = "Character is still loading." }
+	end
+
+	if player:GetAttribute("StreetLegalSpawnStabilizing") == true or player:GetAttribute("StreetLegalSpawnReady") ~= true then
+		return { Success = false, Message = "Hold on, still placing your rider." }
+	end
+
 	self:DespawnBike(player)
 
 	local model = self:CreateBikeModel(player, bikeId)
 	self.ActiveBikes[player] = model
 	player:SetAttribute("StreetLegalActiveBikeId", bikeId)
 
-	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local seat = model:FindFirstChild("Seat")
 	if humanoid and seat then
@@ -655,6 +797,10 @@ end
 
 function PurchaseService:HandleBikeAction(player, action, payload)
 	payload = payload or {}
+	if not self:CanProcessAction(player, action) then
+		return { Success = false, Message = "Hold up a second." }
+	end
+
 	local profile = self.DataService:GetProfile(player)
 	if not profile then
 		profile = self.DataService:LoadProfile(player)

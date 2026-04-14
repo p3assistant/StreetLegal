@@ -8,6 +8,7 @@ local BikeDefinitions = require(ReplicatedStorage.Modules.BikeDefinitions)
 
 local DataService = {
 	Profiles = {},
+	DirtyProfiles = {},
 	Remotes = nil,
 	Store = nil,
 	Initialized = false,
@@ -96,19 +97,29 @@ function DataService:Init(remotes)
 	end
 
 	Players.PlayerAdded:Connect(function(player)
+		player:SetAttribute("StreetLegalProfileReady", false)
 		self:LoadProfile(player)
 	end)
 
 	Players.PlayerRemoving:Connect(function(player)
 		self:SaveProfile(player)
 		self.Profiles[player] = nil
+		self.DirtyProfiles[player] = nil
 	end)
 
 	for _, player in ipairs(Players:GetPlayers()) do
+		player:SetAttribute("StreetLegalProfileReady", false)
 		task.spawn(function()
 			self:LoadProfile(player)
 		end)
 	end
+
+	task.spawn(function()
+		while self.Initialized do
+			task.wait(Config.Gameplay.AutosaveInterval)
+			self:AutosaveProfiles()
+		end
+	end)
 
 	game:BindToClose(function()
 		for _, player in ipairs(Players:GetPlayers()) do
@@ -146,6 +157,24 @@ function DataService:PushProfile(player)
 	end
 end
 
+function DataService:MarkDirty(player)
+	if self.Profiles[player] then
+		self.DirtyProfiles[player] = true
+	end
+end
+
+function DataService:AutosaveProfiles()
+	if self.UseMockStore or not self.Store then
+		return
+	end
+
+	for _, player in ipairs(Players:GetPlayers()) do
+		if self.DirtyProfiles[player] then
+			self:SaveProfile(player)
+		end
+	end
+end
+
 function DataService:LoadProfile(player)
 	if self.Profiles[player] then
 		return self.Profiles[player]
@@ -169,6 +198,7 @@ function DataService:LoadProfile(player)
 	profile = ensureFreeBikeOwnership(profile)
 
 	self.Profiles[player] = profile
+	self.DirtyProfiles[player] = false
 	player:SetAttribute("StreetLegalProfileReady", true)
 	self:PushProfile(player)
 	return profile
@@ -180,7 +210,12 @@ function DataService:SaveProfile(player)
 		return false
 	end
 
+	if not self.DirtyProfiles[player] then
+		return true
+	end
+
 	if self.UseMockStore or not self.Store then
+		self.DirtyProfiles[player] = false
 		return true
 	end
 
@@ -193,6 +228,8 @@ function DataService:SaveProfile(player)
 
 	if not ok then
 		warn("[StreetLegal] Failed to save profile for", player.Name, err)
+	else
+		self.DirtyProfiles[player] = false
 	end
 
 	return ok
@@ -210,6 +247,7 @@ function DataService:GrantBike(player, bikeId)
 	end
 
 	profile.OwnedBikes[bikeId] = true
+	self:MarkDirty(player)
 	self:PushProfile(player)
 	return true
 end
@@ -225,6 +263,7 @@ function DataService:SetEquippedBike(player, bikeId)
 	end
 
 	profile.EquippedBikeId = bikeId
+	self:MarkDirty(player)
 	self:PushProfile(player)
 	return true
 end
@@ -239,6 +278,7 @@ function DataService:AdjustCash(player, delta)
 	if delta > 0 then
 		profile.Stats.TotalCashEarned = (profile.Stats.TotalCashEarned or 0) + delta
 	end
+	self:MarkDirty(player)
 	self:PushProfile(player)
 	return true, profile.Cash
 end
@@ -258,6 +298,7 @@ function DataService:SpendCash(player, amount)
 	end
 
 	profile.Cash -= amount
+	self:MarkDirty(player)
 	self:PushProfile(player)
 	return true, profile.Cash
 end
@@ -270,6 +311,7 @@ function DataService:RecordStunt(player, score)
 
 	profile.Stats.TotalStunts = (profile.Stats.TotalStunts or 0) + 1
 	profile.Stats.BestCombo = math.max(profile.Stats.BestCombo or 0, score)
+	self:MarkDirty(player)
 	self:PushProfile(player)
 end
 
@@ -280,6 +322,7 @@ function DataService:RecordArrest(player)
 	end
 
 	profile.Stats.Arrests = (profile.Stats.Arrests or 0) + 1
+	self:MarkDirty(player)
 	self:PushProfile(player)
 end
 

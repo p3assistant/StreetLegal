@@ -476,8 +476,8 @@ return profiles
 local Config = {
 	Experience = {
 		Name = "Street Legal",
-		Version = "0.4.1",
-		Build = "wheelie-hardfix",
+		Version = "0.4.2",
+		Build = "production-readiness-pass",
 	},
 	Gameplay = {
 		DataStoreName = "StreetLegal_PlayerData_v1",
@@ -704,6 +704,7 @@ local BikeDefinitions = require(ReplicatedStorage.Modules.BikeDefinitions)
 
 local DataService = {
 	Profiles = {},
+	DirtyProfiles = {},
 	Remotes = nil,
 	Store = nil,
 	Initialized = false,
@@ -792,19 +793,29 @@ function DataService:Init(remotes)
 	end
 
 	Players.PlayerAdded:Connect(function(player)
+		player:SetAttribute("StreetLegalProfileReady", false)
 		self:LoadProfile(player)
 	end)
 
 	Players.PlayerRemoving:Connect(function(player)
 		self:SaveProfile(player)
 		self.Profiles[player] = nil
+		self.DirtyProfiles[player] = nil
 	end)
 
 	for _, player in ipairs(Players:GetPlayers()) do
+		player:SetAttribute("StreetLegalProfileReady", false)
 		task.spawn(function()
 			self:LoadProfile(player)
 		end)
 	end
+
+	task.spawn(function()
+		while self.Initialized do
+			task.wait(Config.Gameplay.AutosaveInterval)
+			self:AutosaveProfiles()
+		end
+	end)
 
 	game:BindToClose(function()
 		for _, player in ipairs(Players:GetPlayers()) do
@@ -842,6 +853,24 @@ function DataService:PushProfile(player)
 	end
 end
 
+function DataService:MarkDirty(player)
+	if self.Profiles[player] then
+		self.DirtyProfiles[player] = true
+	end
+end
+
+function DataService:AutosaveProfiles()
+	if self.UseMockStore or not self.Store then
+		return
+	end
+
+	for _, player in ipairs(Players:GetPlayers()) do
+		if self.DirtyProfiles[player] then
+			self:SaveProfile(player)
+		end
+	end
+end
+
 function DataService:LoadProfile(player)
 	if self.Profiles[player] then
 		return self.Profiles[player]
@@ -865,6 +894,7 @@ function DataService:LoadProfile(player)
 	profile = ensureFreeBikeOwnership(profile)
 
 	self.Profiles[player] = profile
+	self.DirtyProfiles[player] = false
 	player:SetAttribute("StreetLegalProfileReady", true)
 	self:PushProfile(player)
 	return profile
@@ -876,7 +906,12 @@ function DataService:SaveProfile(player)
 		return false
 	end
 
+	if not self.DirtyProfiles[player] then
+		return true
+	end
+
 	if self.UseMockStore or not self.Store then
+		self.DirtyProfiles[player] = false
 		return true
 	end
 
@@ -889,6 +924,8 @@ function DataService:SaveProfile(player)
 
 	if not ok then
 		warn("[StreetLegal] Failed to save profile for", player.Name, err)
+	else
+		self.DirtyProfiles[player] = false
 	end
 
 	return ok
@@ -906,6 +943,7 @@ function DataService:GrantBike(player, bikeId)
 	end
 
 	profile.OwnedBikes[bikeId] = true
+	self:MarkDirty(player)
 	self:PushProfile(player)
 	return true
 end
@@ -921,6 +959,7 @@ function DataService:SetEquippedBike(player, bikeId)
 	end
 
 	profile.EquippedBikeId = bikeId
+	self:MarkDirty(player)
 	self:PushProfile(player)
 	return true
 end
@@ -935,6 +974,7 @@ function DataService:AdjustCash(player, delta)
 	if delta > 0 then
 		profile.Stats.TotalCashEarned = (profile.Stats.TotalCashEarned or 0) + delta
 	end
+	self:MarkDirty(player)
 	self:PushProfile(player)
 	return true, profile.Cash
 end
@@ -954,6 +994,7 @@ function DataService:SpendCash(player, amount)
 	end
 
 	profile.Cash -= amount
+	self:MarkDirty(player)
 	self:PushProfile(player)
 	return true, profile.Cash
 end
@@ -966,6 +1007,7 @@ function DataService:RecordStunt(player, score)
 
 	profile.Stats.TotalStunts = (profile.Stats.TotalStunts or 0) + 1
 	profile.Stats.BestCombo = math.max(profile.Stats.BestCombo or 0, score)
+	self:MarkDirty(player)
 	self:PushProfile(player)
 end
 
@@ -976,6 +1018,7 @@ function DataService:RecordArrest(player)
 	end
 
 	profile.Stats.Arrests = (profile.Stats.Arrests or 0) + 1
+	self:MarkDirty(player)
 	self:PushProfile(player)
 end
 
@@ -1280,12 +1323,23 @@ local SpawnUtil = require(script.Parent.SpawnUtil)
 
 local PurchaseService = {
 	ActiveBikes = {},
+	ActionStamps = {},
 	RuntimeFolder = nil,
 	BikesFolder = nil,
 	DataService = nil,
 	WantedService = nil,
 	Remotes = nil,
 	Initialized = false,
+}
+
+local ACTION_COOLDOWNS = {
+	BuyBike = 0.75,
+	DespawnBike = 0.35,
+	EquipAndSpawnBike = 0.6,
+	EquipBike = 0.25,
+	RespawnBike = 0.6,
+	SpawnBike = 0.6,
+	StoreBike = 0.35,
 }
 
 local function now()
@@ -1392,6 +1446,115 @@ local function setPlayerBikeAttributes(player, activeBikeId)
 	player:SetAttribute("StreetLegalMounted", false)
 end
 
+local function getCharacterRootPart(player)
+	local character = player and player.Character
+	return character and character:FindFirstChild("HumanoidRootPart") or nil
+end
+
+local function isWithinWorldBounds(position)
+	local minBounds = Config.World.Bounds.Min
+	local maxBounds = Config.World.Bounds.Max
+	local padding = 120
+	return position.X >= (minBounds.X - padding)
+		and position.X <= (maxBounds.X + padding)
+		and position.Z >= (minBounds.Z - padding)
+		and position.Z <= (maxBounds.Z + padding)
+		and position.Y >= (minBounds.Y - 80)
+		and position.Y <= (maxBounds.Y + padding)
+end
+
+function PurchaseService:NotifyPlayer(player, notificationType, text)
+	if self.Remotes and self.Remotes.Notification and player and player.Parent and text ~= "" then
+		self.Remotes.Notification:FireClient(player, {
+			Type = notificationType or "success",
+			Text = text,
+		})
+	end
+end
+
+function PurchaseService:CanProcessAction(player, action)
+	local cooldown = ACTION_COOLDOWNS[action]
+	if not cooldown then
+		return true
+	end
+
+	local stamp = now()
+	local playerStamps = self.ActionStamps[player]
+	if not playerStamps then
+		playerStamps = {}
+		self.ActionStamps[player] = playerStamps
+	end
+
+	local lastAt = playerStamps[action] or 0
+	if stamp - lastAt < cooldown then
+		return false
+	end
+
+	playerStamps[action] = stamp
+	return true
+end
+
+function PurchaseService:ReconcileActiveBike(player, model)
+	if not player or not player.Parent then
+		self.ActiveBikes[player] = nil
+		self.ActionStamps[player] = nil
+		return
+	end
+
+	if not model or not model.Parent then
+		self.ActiveBikes[player] = nil
+		setPlayerBikeAttributes(player, nil)
+		return
+	end
+
+	local primaryPart = model.PrimaryPart
+	if not primaryPart then
+		self:DespawnBike(player)
+		self:NotifyPlayer(player, "danger", "Bike recovered after losing its runtime state.")
+		return
+	end
+
+	local seat = model:FindFirstChild("Seat")
+	local occupant = seat and seat:IsA("VehicleSeat") and seat.Occupant or nil
+	local character = player.Character
+	local rootPart = getCharacterRootPart(player)
+
+	if occupant and (not character or occupant.Parent ~= character) then
+		occupant.Sit = false
+		occupant = nil
+	end
+
+	player:SetAttribute("StreetLegalMounted", occupant ~= nil)
+
+	if not isWithinWorldBounds(primaryPart.Position) then
+		self:DespawnBike(player)
+		self:NotifyPlayer(player, "danger", "Bike recovered after leaving the playable area.")
+		return
+	end
+
+	if rootPart and not occupant then
+		local distanceFromPlayer = (primaryPart.Position - rootPart.Position).Magnitude
+		if distanceFromPlayer > Config.Gameplay.MaxBikeDistanceFromPlayer then
+			self:DespawnBike(player)
+			self:NotifyPlayer(player, "danger", "Bike stored because it got too far away.")
+			return
+		end
+	end
+
+	if (not character or not rootPart) and not occupant then
+		self:DespawnBike(player)
+		return
+	end
+
+	player:SetAttribute("StreetLegalActiveBikeId", model:GetAttribute("BikeId"))
+end
+
+function PurchaseService:RunMaintenance()
+	for player, model in pairs(self.ActiveBikes) do
+		self:ReconcileActiveBike(player, model)
+	end
+end
+
 function PurchaseService:Init(dataService, wantedService, remotes)
 	if self.Initialized then
 		return
@@ -1428,6 +1591,7 @@ function PurchaseService:Init(dataService, wantedService, remotes)
 	end)
 
 	local function initializePlayer(player)
+		self.ActionStamps[player] = {}
 		setPlayerBikeAttributes(player, nil)
 	end
 
@@ -1438,6 +1602,14 @@ function PurchaseService:Init(dataService, wantedService, remotes)
 
 	Players.PlayerRemoving:Connect(function(player)
 		self:DespawnBike(player)
+		self.ActionStamps[player] = nil
+	end)
+
+	task.spawn(function()
+		while self.Initialized do
+			self:RunMaintenance()
+			task.wait(1)
+		end
 	end)
 end
 
@@ -1818,13 +1990,26 @@ function PurchaseService:SpawnBike(player, bikeId)
 		return { Success = false, Message = "Bike not owned." }
 	end
 
+	if Workspace:GetAttribute("StreetLegalWorldReady") ~= true then
+		return { Success = false, Message = "World is still loading." }
+	end
+
+	local character = player.Character
+	local rootPart = getCharacterRootPart(player)
+	if not character or not rootPart then
+		return { Success = false, Message = "Character is still loading." }
+	end
+
+	if player:GetAttribute("StreetLegalSpawnStabilizing") == true or player:GetAttribute("StreetLegalSpawnReady") ~= true then
+		return { Success = false, Message = "Hold on, still placing your rider." }
+	end
+
 	self:DespawnBike(player)
 
 	local model = self:CreateBikeModel(player, bikeId)
 	self.ActiveBikes[player] = model
 	player:SetAttribute("StreetLegalActiveBikeId", bikeId)
 
-	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local seat = model:FindFirstChild("Seat")
 	if humanoid and seat then
@@ -1925,6 +2110,10 @@ end
 
 function PurchaseService:HandleBikeAction(player, action, payload)
 	payload = payload or {}
+	if not self:CanProcessAction(player, action) then
+		return { Success = false, Message = "Hold up a second." }
+	end
+
 	local profile = self.DataService:GetProfile(player)
 	if not profile then
 		profile = self.DataService:LoadProfile(player)
@@ -2892,6 +3081,10 @@ local function getRuntimeBikesFolder()
 	return runtime and runtime:FindFirstChild("Bikes") or nil
 end
 
+local TELEMETRY_MOUNT_DISTANCE = 18
+local MAX_STUNT_AIRTIME = 6
+local MIN_STUNT_SPEED_MPH = 18
+
 function WantedService:EnsureState(player)
 	local state = self.States[player]
 	if state then
@@ -2908,6 +3101,9 @@ function WantedService:EnsureState(player)
 		ArrestCooldownEnds = 0,
 		LastPushedHeat = -1,
 		LastPushedLevel = -1,
+		NextStuntAwardAt = 0,
+		NextNearMissAt = 0,
+		LastValidatedBikeSpeedStuds = 0,
 	}
 	self.States[player] = state
 	player:SetAttribute("StreetLegalHeat", 0)
@@ -2988,6 +3184,34 @@ function WantedService:GetActiveBikeModel(player)
 	return nil
 end
 
+function WantedService:GetMountedBikeContext(player, character)
+	local activeBike = self:GetActiveBikeModel(player)
+	if not activeBike or not activeBike.PrimaryPart then
+		return nil, nil
+	end
+
+	local seat = activeBike:FindFirstChild("Seat")
+	if not seat or not seat:IsA("VehicleSeat") then
+		return nil, nil
+	end
+
+	local occupant = seat.Occupant
+	if not occupant or occupant.Parent ~= character then
+		return nil, nil
+	end
+
+	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+	if not rootPart then
+		return nil, nil
+	end
+
+	if (activeBike.PrimaryPart.Position - rootPart.Position).Magnitude > TELEMETRY_MOUNT_DISTANCE then
+		return nil, nil
+	end
+
+	return activeBike, activeBike.PrimaryPart
+end
+
 function WantedService:DestroyActiveBike(player)
 	local activeBike = self:GetActiveBikeModel(player)
 	if activeBike then
@@ -3042,6 +3266,7 @@ end
 
 function WantedService:HandleTelemetry(player, action, payload)
 	payload = payload or {}
+	local state = self:EnsureState(player)
 	local character = player.Character
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 	if not rootPart then
@@ -3049,22 +3274,57 @@ function WantedService:HandleTelemetry(player, action, payload)
 	end
 
 	if action == "StuntLanded" then
-		local score = tonumber(payload.Score) or 0
-		local airtime = tonumber(payload.Airtime) or 0
-		if score <= 0 or score > 4000 or airtime < 0 or airtime > 12 then
+		local activeBike, bikeRoot = self:GetMountedBikeContext(player, character)
+		if not activeBike or not bikeRoot then
 			return
 		end
 
-		self:AwardStunt(player, score)
-		local surface = self:GetSurfaceInfo(rootPart.Position, { character })
+		local stamp = now()
+		if state.NextStuntAwardAt > stamp then
+			return
+		end
+
+		local score = tonumber(payload.Score) or 0
+		local airtime = tonumber(payload.Airtime) or 0
+		if score <= 0 or score > 4000 or airtime < 0.35 or airtime > MAX_STUNT_AIRTIME then
+			return
+		end
+
+		local speedStuds = math.max(state.LastValidatedBikeSpeedStuds or 0, bikeRoot.AssemblyLinearVelocity.Magnitude)
+		local speedMph = speedStuds / Config.Bike.MphToStuds
+		if speedMph < MIN_STUNT_SPEED_MPH then
+			return
+		end
+
+		local maxScore = math.clamp(math.floor((airtime * 170) + (speedMph * 5) + 180), 25, 2500)
+		local awardedScore = math.min(math.floor(score + 0.5), maxScore)
+		if awardedScore < 25 then
+			return
+		end
+
+		state.NextStuntAwardAt = stamp + math.clamp(1 + (airtime * 0.5), 1, 4)
+		self:AwardStunt(player, awardedScore)
+		local surface = self:GetSurfaceInfo(bikeRoot.Position, { activeBike, character })
 		if surface == "Street" then
 			self:AddHeat(player, "StuntNoise")
 		end
 	elseif action == "NearMiss" then
-		local speed = rootPart.AssemblyLinearVelocity.Magnitude / Config.Bike.MphToStuds
+		local _, bikeRoot = self:GetMountedBikeContext(player, character)
+		if not bikeRoot then
+			return
+		end
+
+		local stamp = now()
+		if state.NextNearMissAt > stamp then
+			return
+		end
+
+		local speed = bikeRoot.AssemblyLinearVelocity.Magnitude / Config.Bike.MphToStuds
 		if speed < 25 then
 			return
 		end
+
+		state.NextNearMissAt = stamp + math.max(0.5, WantedConfig.Infractions.NearMiss.Cooldown or 1)
 		self:AddHeat(player, "NearMiss")
 	end
 end
@@ -3094,6 +3354,7 @@ function WantedService:EvaluatePlayer(player)
 	if bike and activeBike and activeBike.PrimaryPart then
 		local speedStuds = activeBike.PrimaryPart.AssemblyLinearVelocity.Magnitude
 		local speedMph = speedStuds / Config.Bike.MphToStuds
+		state.LastValidatedBikeSpeedStuds = speedStuds
 		local surface, district = self:GetSurfaceInfo(activeBike.PrimaryPart.Position, { activeBike, character })
 		player:SetAttribute("StreetLegalDistrict", district)
 
@@ -3118,8 +3379,11 @@ function WantedService:EvaluatePlayer(player)
 			end
 		end
 	elseif rootPart then
+		state.LastValidatedBikeSpeedStuds = 0
 		local surface, district = self:GetSurfaceInfo(rootPart.Position, { character })
 		player:SetAttribute("StreetLegalDistrict", district)
+	else
+		state.LastValidatedBikeSpeedStuds = 0
 	end
 
 	self:DecayState(player, state)
@@ -3140,6 +3404,9 @@ function WantedService:ArrestPlayer(player, arrestingOfficer)
 	state.LastInfractionAt = 0
 	state.NextDecayAt = 0
 	state.ArrestCooldownEnds = stamp + Config.Gameplay.ArrestCooldown
+	state.NextStuntAwardAt = 0
+	state.NextNearMissAt = 0
+	state.LastValidatedBikeSpeedStuds = 0
 	self:PushState(player, true)
 
 	self:DestroyActiveBike(player)
@@ -3653,7 +3920,8 @@ local function updateDetails()
 	local owned = ownsBike(bike.Id)
 	local equipped = state.Snapshot.EquippedBikeId == bike.Id
 	local active = activeBikeId == bike.Id
-	local unlockText = bike.UnlockType == "Cash" and ("$" .. tostring(bike.Price)) or (bike.UnlockType == "Gamepass" and "Game Pass" or "Free Starter")
+	local comingSoon = bike.UnlockType == "Gamepass" and (bike.GamePassId or 0) == 0
+	local unlockText = bike.UnlockType == "Cash" and ("$" .. tostring(bike.Price)) or (bike.UnlockType == "Gamepass" and (comingSoon and "Coming Soon" or "Game Pass") or "Free Starter")
 	local ownershipLabel = owned and (active and "ACTIVE" or (equipped and "EQUIPPED" or "OWNED")) or "LOCKED"
 
 	bikeName.Text = bike.DisplayName
@@ -3680,12 +3948,14 @@ local function updateDetails()
 		end
 		updateButton(secondaryButton, not equipped, equipped and "Equipped" or "Equip Only", Config.UI.Accent)
 	else
-		if bike.UnlockType == "Free" then
+		if comingSoon then
+			updateButton(primaryButton, false, "Coming Soon", Color3.fromRGB(92, 98, 108))
+		elseif bike.UnlockType == "Free" then
 			updateButton(primaryButton, true, "Claim & Spawn", Config.UI.Success)
 		else
 			updateButton(primaryButton, true, bike.UnlockType == "Cash" and ("Buy $" .. tostring(bike.Price)) or "Unlock", Config.UI.Primary)
 		end
-		updateButton(secondaryButton, false, bike.UnlockType == "Free" and "Free Starter" or "Owned Required", Config.UI.Accent)
+		updateButton(secondaryButton, false, comingSoon and "Unavailable" or (bike.UnlockType == "Free" and "Free Starter" or "Owned Required"), Config.UI.Accent)
 	end
 
 	updateButton(storeButton, activeBikeId ~= nil, active and "Store Active Bike" or (activeBikeId and "Store Current Bike" or "No Bike Out"), Color3.fromRGB(134, 157, 181))
@@ -3713,7 +3983,8 @@ local function renderCatalog()
 	for index, bike in ipairs(state.Catalog) do
 		local owned = ownsBike(bike.Id)
 		local active = getActiveBikeId() == bike.Id
-		local unlockText = bike.UnlockType == "Cash" and ("$" .. tostring(bike.Price)) or (bike.UnlockType == "Gamepass" and "GAME PASS" or "FREE STARTER")
+		local comingSoon = bike.UnlockType == "Gamepass" and (bike.GamePassId or 0) == 0
+		local unlockText = bike.UnlockType == "Cash" and ("$" .. tostring(bike.Price)) or (bike.UnlockType == "Gamepass" and (comingSoon and "COMING SOON" or "GAME PASS") or "FREE STARTER")
 		local row = Instance.new("TextButton")
 		row.Name = bike.Id
 		row.Size = UDim2.new(1, -4, 0, 76)
